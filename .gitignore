@@ -1,0 +1,76 @@
+## ----------------------------------------------------------------------
+## .NET / ASP.NET Core Standard Exclusions
+## ----------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Log]/
+[Logs]/
+
+# User-Secrets configuration directory (never commit local API keys/passwords)
+secrets.json
+
+# Visual Studio / .NET Core runtime hosting metadata logs
+.attach_pid*
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET command-line tool state caches
+.dotnet/
+.tools/
+
+## ----------------------------------------------------------------------
+## IDE Custom Cache Engines & Tools
+## ----------------------------------------------------------------------
+# JetBrains Rider IDE files
+.idea/
+*.sln.iml
+
+# Visual Studio Code workspace tracking configurations
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/code-workspace
+
+# Visual Studio temporary files, user caches, and builds
+.vs/
+Generated_Code/
+_ReSharper*/
+*.[Cc]ache
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.ltx
+*.Lyx
+*.pdf
+
+## ----------------------------------------------------------------------
+## Web/Frontend Development Assets & Compilers
+## ----------------------------------------------------------------------
+# Local package manager stores (if integrating TypeScript/Tailwind node assets)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Production deployment artifact outputs
+publish/
+out/
+
+## ----------------------------------------------------------------------
+## Operating System System-Level Junk Files
+## ----------------------------------------------------------------------
+# macOS specific desktop workspace metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows specific folder thumbnail caches
+Thumbs.db
+ehthumbs.db
+Desktop.ini
