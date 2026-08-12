@@ -74,3 +74,14 @@ out/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+## ----------------------------------------------------------------------
+# Local Environment & Frontend Build Output
+# Local environment variables — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# Vite build output & cache
+dist/
+.vite/

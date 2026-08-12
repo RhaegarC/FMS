@@ -41,8 +41,8 @@ Features are numbered by priority/order, matching the files in `docs/features/`:
 ### TDD Workflow (Strictly Follow)
 
 #### Phase 0: Foundation (once, before feature 01)
-1. Scaffold the solution + test projects per [docs/testing-and-tdd.md](docs/testing-and-tdd.md): backend `src/Fms.Api` + `tests/Fms.Tests` (xUnit); frontend vitest configured in `apps/*` and `packages/form-renderer`.
-2. Confirm `dotnet test` runs green on an empty test project.
+1. Scaffold the solution + test projects per [docs/testing-and-tdd.md](docs/testing-and-tdd.md): backend `src/api/Fms.Api` + `src/api/Fms.Tests` (xUnit); frontend vitest configured in `src/web/apps/*` and `src/web/packages/form-renderer`.
+2. Confirm `dotnet test` (from `src/api/`) runs green on an empty test project.
 
 #### Phase 1: Feature Selection
 1. Scan `docs/features/` for the **lowest numbered** feature file (ignore the exceptions: `00-mission-1-sprint.md`, `backlog.md`, and anything under `archive/`)
@@ -69,7 +69,7 @@ git checkout -b feature/[number]-[feature-name]
 1. Create or update test files based on acceptance criteria
 2. Write failing tests that define expected behavior — tiers per [docs/testing-and-tdd.md](docs/testing-and-tdd.md): backend xUnit (unit) + EF Core InMemory (integration); frontend vitest + React Testing Library (unit/component)
 3. Ensure tests fail (validate test correctness)
-4. Test command: backend `dotnet test`; frontend `pnpm test` (workspace) — run the one(s) covering the feature's code
+4. Test command: backend `dotnet test` (from `src/api/`); frontend `pnpm test` (workspace, from `src/web/`) — run the one(s) covering the feature's code
 
 #### Phase 4: Implement Feature (GREEN)
 1. Write minimal code to make tests pass
@@ -78,14 +78,20 @@ git checkout -b feature/[number]-[feature-name]
 4. Ensure code is clean and maintainable
 
 #### Phase 5: Refactor & Verify
-1. Run all tests: backend `dotnet test`; frontend `pnpm test`
+1. Run all tests: backend `dotnet test` (from `src/api/`); frontend `pnpm test` (from `src/web/`)
 2. If tests fail:
   - Analyze failures
   - Fix issues (code or tests)
   - Re-run tests
 3. Repeat until ALL tests pass
 4. Refactor code while keeping tests green
-5. Update documentation if needed — if the schema changed, update the [data model](docs/PRD.md#data-model) in `docs/PRD.md` and the feature file
+5. Run all tests again to confirm refactor didn't break anything
+6. Run code review: /code-review
+  - Examine the feedback for correctness, reuse, simplification, and efficiency
+  - Address any critical issues found
+  - For nits or suggestions, use your judgment
+7. Update documentation if needed
+  - if the schema changed, update the [data model](docs/PRD.md#data-model) in `docs/PRD.md` and the feature file
 
 #### Phase 6: Commit & Push
 ```bash
@@ -147,7 +153,7 @@ Bugs are tracked separately from features in `docs/bugs/` — they are **not** p
    - **Critical / production-down** → branch `hotfix/[name]` off `master`
 2. **RED**: write a failing regression test that reproduces the bug.
 3. **GREEN**: minimal code to make it pass.
-4. **Verify**: run `dotnet test`; refactor while green.
+4. **Verify**: run `dotnet test` (from `src/api/`); refactor while green.
 5. **PR**: create PR (`fix:` / `hotfix:` commit type) to `develop`, or to `master` for hotfixes.
 6. **Close**: merge; for hotfixes, **merge `master` back into `develop`** so the fix isn't lost; move the bug file to `docs/bugs/archive/`; close the work item. The regression test stays in the suite.
 7. **Cleanup** (mirrors Phase 8 steps 4–5): switch back to `develop` and sync with the remote: `git checkout develop && git pull --prune origin develop`.
