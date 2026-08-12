@@ -1,6 +1,6 @@
 # 00 — Scaffolding (monorepo + docker-compose)
 
-Status: **Implemented** on `feature/00-scaffolding` (2026-08-12, awaiting review/merge)
+Status: **Implemented and merged** via MR #1 (2026-08-12)
 
 ## Summary
 
