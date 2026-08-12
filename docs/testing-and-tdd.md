@@ -27,5 +27,7 @@ Referenced by [.claude/CLAUDE.md](../.claude/CLAUDE.md) — the TDD workflow (RE
 
 ## Commands
 
-- Backend: `dotnet test`
-- Frontend: `pnpm test` (workspace) or `pnpm --filter <package> test`
+- Backend (from `src/api/`): `dotnet test`
+- Frontend — the pnpm workspace root is `src/web/`. Run from there:
+  - `pnpm test` (workspace) or `pnpm --filter <package> test`
+  - From the repo root: `pnpm --dir src/web test`
