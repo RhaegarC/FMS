@@ -8,7 +8,7 @@ User portal for common users: dashboard of granted (visible) forms, fill-and-sub
 
 ## Dependencies
 
-- 03-msal-login.md
+- 04-msal-login.md
 - 05-permissions-service.md (granted-forms visibility)
 - 07-submission-apis.md
 - 08-form-renderer-core.md

@@ -1,4 +1,4 @@
-# 04 — Database schema + migrations
+# 02 — Database schema + migrations
 
 Status: **Not started** (spec drafted 2026-08-06)
 

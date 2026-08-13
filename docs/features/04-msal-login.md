@@ -1,4 +1,4 @@
-# 03 — MSAL login in both portals
+# 04 — MSAL login in both portals
 
 Status: **Not started** (spec drafted 2026-08-06)
 
@@ -8,7 +8,7 @@ Both React apps authenticate against Entra via MSAL, protect their routes, and a
 
 ## Dependencies
 
-- 02-entra-auth.md
+- 03-entra-auth.md
 
 ## User story
 

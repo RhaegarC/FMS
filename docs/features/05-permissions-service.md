@@ -8,7 +8,7 @@ Authorization for data access. Evaluates the `permissions` table's `expression` 
 
 ## Dependencies
 
-- 04-db-schema.md
+- 02-db-schema.md
 
 ## User story
 

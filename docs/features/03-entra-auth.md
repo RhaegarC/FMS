@@ -1,4 +1,4 @@
-# 02 — Entra ID authentication (backend)
+# 03 — Entra ID authentication (backend)
 
 Status: **Not started** (spec drafted 2026-08-06)
 
@@ -9,7 +9,7 @@ Backend authenticates via Microsoft Entra ID: validate bearer tokens, auto-provi
 ## Dependencies
 
 - 01-openapi-contract.md
-- 04-db-schema.md (users table)
+- 02-db-schema.md (users table)
 
 ## User story
 
