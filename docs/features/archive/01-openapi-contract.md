@@ -1,6 +1,6 @@
 # 01 — OpenAPI codegen pipeline
 
-Status: **Not started** (spec drafted 2026-08-06)
+Status: **Implemented and merged** via MR #2 (2026-08-13)
 
 ## Summary
 
