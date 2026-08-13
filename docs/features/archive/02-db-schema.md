@@ -1,6 +1,6 @@
 # 02 — Database schema + migrations
 
-Status: **Not started** (spec drafted 2026-08-06)
+Status: **Implemented and merged** via MR #4 (2026-08-13)
 
 ## Summary
 
