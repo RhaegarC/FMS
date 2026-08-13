@@ -63,7 +63,7 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 | Space | `spaces` | `id` (PK), `name` |
 | Form (Dataset) | `forms` | `id` (PK), `space_id` (FK → spaces), `name`, `schema` (jsonb), `updated_at` |
 | Submission | `submissions` | `id` (PK), `form_id` (FK → forms), `user_id` (FK → users), `data` (jsonb), `created_at` |
-| Permission | `permissions` | `id` (PK), `resource_type` (`space` \| `form`), `resource_id` (uuid \| `*`), `expression` (text) |
+| Permission | `permissions` | `id` (PK), `resource_type` (`space` \| `form`), `resource_id` (`*` or the target's `id` as text), `expression` (text) |
 
 **Access semantics**: a space grant = access to all forms under that space (e.g. `spaceA.*`); a form grant = that single form; effective access = union of space + form grants. Default deny.
 
