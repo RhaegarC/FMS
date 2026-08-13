@@ -1,5 +1,9 @@
 /** Shared HTTP client for the FMS backend API. */
 
+// Types generated from the backend OpenAPI spec (feature 01).
+// Regenerate with: pnpm --dir src/web --filter @fms/api-client gen
+export type * from './generated';
+
 /** API version prefix used in every request path. */
 export const API_VERSION = 'v1';
 

@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fms/api-client": "workspace:*",
     "@fms/types": "workspace:*",
     "@fms/ui": "workspace:*",
     "react": "^19.0.0",

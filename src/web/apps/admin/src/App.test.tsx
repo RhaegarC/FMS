@@ -12,4 +12,9 @@ describe('Admin App', () => {
     render(<App />);
     expect(screen.getByRole('button', { name: 'Create form' })).toBeInTheDocument();
   });
+
+  it('reports the API base path from the generated client', () => {
+    render(<App />);
+    expect(screen.getByText(/\/api\/v1\/health/)).toBeInTheDocument();
+  });
 });
