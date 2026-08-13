@@ -8,7 +8,7 @@ Admin portal form-config UI: form list per space, Monaco JSON editor with schema
 
 ## Dependencies
 
-- 03-msal-login.md
+- 04-msal-login.md
 - 06-space-form-crud.md
 - 08-form-renderer-core.md
 

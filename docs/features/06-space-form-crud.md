@@ -8,7 +8,7 @@ Admin-gated REST APIs for managing spaces and forms (create/read/update/delete/l
 
 ## Dependencies
 
-- 04-db-schema.md
+- 02-db-schema.md
 - 05-permissions-service.md
 
 ## User story
