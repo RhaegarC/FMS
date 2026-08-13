@@ -12,4 +12,9 @@ describe('User App', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: 'Feedback form' })).toBeInTheDocument();
   });
+
+  it('reports the API base path from the generated client', () => {
+    render(<App />);
+    expect(screen.getByText(/\/api\/v1\/health/)).toBeInTheDocument();
+  });
 });
