@@ -1,6 +1,6 @@
 # 03 — Entra ID authentication (backend)
 
-Status: **Not started** (spec drafted 2026-08-06)
+Status: **Implemented and merged** via MR #5 (2026-08-21)
 
 ## Summary
 
