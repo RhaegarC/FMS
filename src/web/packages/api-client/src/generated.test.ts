@@ -14,4 +14,10 @@ describe('generated API client (from OpenAPI spec)', () => {
     const src = readFileSync(generatedPath, 'utf8');
     expect(src).toContain('/health');
   });
+
+  it('describes the space/form catalog endpoints (feature 06)', () => {
+    const src = readFileSync(generatedPath, 'utf8');
+    expect(src).toContain('/api/spaces');
+    expect(src).toContain('/api/forms/{id}');
+  });
 });
