@@ -1,6 +1,6 @@
 # 07 — Submission APIs + export
 
-Status: **Not started** (spec drafted 2026-08-06)
+Status: **Implemented and merged** via MR #9 (2026-08-24)
 
 ## Summary
 
