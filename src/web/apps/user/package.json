@@ -11,10 +11,12 @@
   },
   "dependencies": {
     "@fms/api-client": "workspace:*",
+    "@fms/auth": "workspace:*",
     "@fms/form-renderer": "workspace:*",
     "@fms/types": "workspace:*",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.0.0",
