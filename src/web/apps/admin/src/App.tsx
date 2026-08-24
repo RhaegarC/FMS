@@ -1,16 +1,28 @@
-import { buildUrl } from '@fms/api-client';
-import { APP_NAME } from '@fms/types';
-import { Button } from '@fms/ui';
-import './index.css';
+import { LoginPage, RequireAuth, RequireRole } from '@fms/auth';
+import { Route, Routes } from 'react-router-dom';
+import { AdminHomePage } from './pages/AdminHomePage';
+import { ConfigPage } from './pages/ConfigPage';
 
+/**
+ * Admin portal routes. Everything except /login sits behind RequireAuth; the
+ * /config workspace additionally requires the admin role (feature 04).
+ */
 function App() {
   return (
-    <main>
-      <h1>{APP_NAME} Admin</h1>
-      <p>Form configuration portal.</p>
-      <p>API: {buildUrl('/health')}</p>
-      <Button>Create form</Button>
-    </main>
+    <Routes>
+      <Route path="/login" element={<LoginPage title="FMS Admin" />} />
+      <Route element={<RequireAuth />}>
+        <Route path="/" element={<AdminHomePage />} />
+        <Route
+          path="/config"
+          element={
+            <RequireRole role="admin">
+              <ConfigPage />
+            </RequireRole>
+          }
+        />
+      </Route>
+    </Routes>
   );
 }
 

@@ -117,6 +117,7 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 - EF Core migrations run at backend startup (DB created on first boot).
 - Entra app registration(s) with `http://localhost:<port>` redirect URIs required (one-time setup).
 - Config via `.env`: connection string, Entra tenant/clientId, `ADMIN_USER_IDS`, data-source URL policy, CORS.
+- SPA auth config (feature 04): each portal reads `VITE_ENTRA_CLIENT_ID`, `VITE_ENTRA_TENANT_ID` — and optionally `VITE_ENTRA_REDIRECT_URI` / `VITE_ENTRA_SCOPE` — from its own `.env` (see `src/web/apps/*/.env.example`).
 
 ## Out of scope / deferred
 
