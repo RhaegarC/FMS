@@ -1,6 +1,6 @@
 # 05 — Permission evaluation service
 
-Status: **Not started** (spec drafted 2026-08-06)
+Status: **Implemented and merged** via MR #7 (2026-08-24)
 
 ## Summary
 
