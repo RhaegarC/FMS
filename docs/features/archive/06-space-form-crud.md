@@ -1,6 +1,6 @@
 # 06 — Space & Form CRUD APIs
 
-Status: **Not started** (spec drafted 2026-08-06)
+Status: **Implemented and merged** via MR #8 (2026-08-24)
 
 ## Summary
 
