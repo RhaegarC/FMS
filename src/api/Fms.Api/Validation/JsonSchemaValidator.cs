@@ -52,4 +52,59 @@ public sealed class JsonSchemaValidator
 
         return true;
     }
+
+    /// <summary>Returns true iff <paramref name="dataJson"/> conforms to the schema
+    /// in <paramref name="schemaJson"/> (feature 07 — the submit-time guard).
+    /// A malformed or non-object schema is treated as deny (fail closed), mirroring
+    /// <see cref="IsValid"/>'s contract. <paramref name="error"/> carries a
+    /// human-readable reason when validation fails.</summary>
+    public bool ValidateInstance(string schemaJson, string dataJson, out string? error)
+    {
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(schemaJson))
+        {
+            error = "Form has no schema.";
+            return false;
+        }
+
+        if (!IsValid(schemaJson, out var schemaError))
+        {
+            error = $"Form schema is not valid JSON Schema (draft 2020-12): {schemaError}";
+            return false;
+        }
+
+        JsonElement data;
+        try
+        {
+            using var doc = JsonDocument.Parse(dataJson);
+            data = doc.RootElement.Clone();
+        }
+        catch (JsonException ex)
+        {
+            error = $"Payload is not valid JSON: {ex.Message}";
+            return false;
+        }
+
+        if (data.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            error = "Payload is empty.";
+            return false;
+        }
+
+        var schema = JsonSchema.FromText(schemaJson);
+        var result = schema.Evaluate(data);
+        if (result.IsValid)
+        {
+            return true;
+        }
+
+        // Surface the first failing instance location (JSON pointer) for a
+        // human-readable rejection message; fall back to a generic reason.
+        var firstError = result.Details?.FirstOrDefault(d => !d.IsValid);
+        error = firstError?.InstanceLocation is { } location
+            ? $"Payload does not match the form schema at {location}."
+            : "Payload does not match the form schema.";
+        return false;
+    }
 }

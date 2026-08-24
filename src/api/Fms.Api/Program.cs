@@ -1,7 +1,11 @@
+using System.Globalization;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Fms.Api.Auth;
 using Fms.Api.Data;
 using Fms.Api.Data.Entities;
+using Fms.Api.Export;
 using Fms.Api.Validation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -70,6 +74,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddScoped<UserProvisioner>();
 builder.Services.AddScoped<PermissionEvaluator>();
 builder.Services.AddScoped<JsonSchemaValidator>();
+builder.Services.AddScoped<SubmissionExcelExporter>();
 
 builder.Services.AddAuthorization(options =>
 {
@@ -286,6 +291,226 @@ app.MapDelete("/api/forms/{id:int}", async (int id, FmsDbContext db) =>
     return Results.NoContent();
 }).RequireAuthorization("AdminOnly").WithName("DeleteForm");
 
+// --- Submission APIs (feature 07) --------------------------------------
+// Submissions are schema-validated against the form's definition before storage.
+// Listing and export are scoped by role: admins see every submission; non-admins
+// see only their own submissions on forms they can access (feature-05 evaluator,
+// default deny). Keyword search matches the jsonb text representation; form/date
+// filters narrow the set. Excel export flattens nested data into a shared table.
+
+app.MapPost("/api/forms/{formId:int}/submissions", async (
+    int formId, SubmitSubmissionRequest request, HttpContext http,
+    FmsDbContext db, PermissionEvaluator evaluator, JsonSchemaValidator validator) =>
+{
+    var user = (User)http.Items[UserProvisioningMiddleware.FmsUserKey]!;
+
+    var form = await db.Forms.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formId);
+    if (form is null)
+    {
+        return Results.NotFound();
+    }
+
+    // Access-control boundary: admins bypass grants; everyone else needs a
+    // space/form grant covering this form (default deny).
+    if (!string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase))
+    {
+        var permissions = await db.Permissions.AsNoTracking().ToListAsync();
+        var subject = new PermissionSubject(user.Id, user.Email, user.Role);
+        if (!evaluator.CanAccessForm(subject, permissions, form.Id, form.SpaceId))
+        {
+            return Results.Forbid();
+        }
+    }
+
+    if (request.Data.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+    {
+        return Results.BadRequest(new ApiError("Submission data is required."));
+    }
+
+    var data = request.Data.GetRawText();
+    if (!validator.ValidateInstance(form.Schema, data, out var validationError))
+    {
+        return Results.BadRequest(new ApiError(validationError ?? "Submission does not match the form schema."));
+    }
+
+    var submission = new Submission
+    {
+        FormId = form.Id,
+        UserId = user.Id,
+        Data = data,
+        CreatedAt = DateTimeOffset.UtcNow,
+    };
+    db.Submissions.Add(submission);
+    await db.SaveChangesAsync();
+
+    var dto = new SubmissionDto(submission.Id, submission.FormId, submission.UserId,
+        user.Email, submission.Data, submission.CreatedAt);
+    return Results.Created($"/api/forms/{form.Id}/submissions/{submission.Id}", dto);
+}).RequireAuthorization().WithName("SubmitSubmission");
+
+app.MapGet("/api/me/submissions", async (
+    HttpContext http, FmsDbContext db, PermissionEvaluator evaluator,
+    int? formId, string? from, string? to, string? q) =>
+{
+    var user = (User)http.Items[UserProvisioningMiddleware.FmsUserKey]!;
+
+    // The caller's own submissions; non-admins are further limited to forms they
+    // can access (union of space + form grants, default deny).
+    IQueryable<Submission> query = BuildSubmissionQuery(db, formId, from, to, q)
+        .Include(s => s.User)
+        .Where(s => s.UserId == user.Id);
+    if (!string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase))
+    {
+        var accessible = await AccessibleFormIdsAsync(user, db, evaluator);
+        query = query.Where(s => accessible.Contains(s.FormId));
+    }
+
+    var submissions = await query.OrderByDescending(s => s.CreatedAt).ToListAsync();
+    return Results.Ok(submissions.Select(ToDto));
+}).RequireAuthorization().WithName("ListMySubmissions");
+
+app.MapGet("/api/submissions", async (
+    FmsDbContext db, int? formId, string? from, string? to, string? q) =>
+{
+    var submissions = await BuildSubmissionQuery(db, formId, from, to, q)
+        .Include(s => s.User)
+        .OrderByDescending(s => s.CreatedAt)
+        .ToListAsync();
+    return Results.Ok(submissions.Select(ToDto));
+}).RequireAuthorization("AdminOnly").WithName("ListAllSubmissions");
+
+app.MapGet("/api/submissions/export", async (
+    FmsDbContext db, SubmissionExcelExporter exporter,
+    string format, int? formId, string? from, string? to, string? q) =>
+{
+    var submissions = await BuildSubmissionQuery(db, formId, from, to, q)
+        .Include(s => s.User)
+        .OrderByDescending(s => s.CreatedAt)
+        .ToListAsync();
+    return ExportSubmissions(submissions, format, exporter);
+}).RequireAuthorization("AdminOnly").WithName("ExportAllSubmissions");
+
+app.MapGet("/api/me/submissions/export", async (
+    HttpContext http, FmsDbContext db, PermissionEvaluator evaluator, SubmissionExcelExporter exporter,
+    string format, int? formId, string? from, string? to, string? q) =>
+{
+    var user = (User)http.Items[UserProvisioningMiddleware.FmsUserKey]!;
+
+    IQueryable<Submission> query = BuildSubmissionQuery(db, formId, from, to, q)
+        .Include(s => s.User)
+        .Where(s => s.UserId == user.Id);
+    if (!string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase))
+    {
+        var accessible = await AccessibleFormIdsAsync(user, db, evaluator);
+        query = query.Where(s => accessible.Contains(s.FormId));
+    }
+
+    var submissions = await query.OrderByDescending(s => s.CreatedAt).ToListAsync();
+    return ExportSubmissions(submissions, format, exporter);
+}).RequireAuthorization().WithName("ExportMySubmissions");
+
+// --- Shared submission helpers (feature 07) ----------------------------
+
+// Ids of forms the caller can access. Permission evaluation is in-memory (the
+// feature-05 expression grammar is the security boundary), so the candidate set
+// is loaded then filtered — same approach as the space/form list endpoints.
+async Task<HashSet<int>> AccessibleFormIdsAsync(User user, FmsDbContext db, PermissionEvaluator evaluator)
+{
+    var permissions = await db.Permissions.AsNoTracking().ToListAsync();
+    var subject = new PermissionSubject(user.Id, user.Email, user.Role);
+    var forms = await db.Forms.AsNoTracking().ToListAsync();
+    return forms
+        .Where(f => evaluator.CanAccessForm(subject, permissions, f.Id, f.SpaceId))
+        .Select(f => f.Id)
+        .ToHashSet();
+}
+
+// Builds the filtered submission query. Keyword search runs against the jsonb
+// text representation — jsonb has no LIKE/ILIKE operator, so the search uses a
+// parameterized raw-SQL base with an explicit data::text cast. The remaining
+// filters (form id, date range) compose on top as ordinary LINQ.
+IQueryable<Submission> BuildSubmissionQuery(
+    FmsDbContext db, int? formId, string? from, string? to, string? keyword)
+{
+    IQueryable<Submission> query;
+    if (string.IsNullOrWhiteSpace(keyword))
+    {
+        query = db.Submissions.AsNoTracking();
+    }
+    else
+    {
+        var pattern = $"%{keyword}%";
+        query = db.Submissions.FromSqlInterpolated(
+                $"SELECT * FROM submissions WHERE data::text ILIKE {pattern}")
+            .AsNoTracking();
+    }
+
+    if (formId is not null)
+    {
+        query = query.Where(s => s.FormId == formId);
+    }
+
+    var fromDate = ParseDateFilter(from, inclusiveEndOfDay: false);
+    if (fromDate is not null)
+    {
+        query = query.Where(s => s.CreatedAt >= fromDate);
+    }
+
+    var toDate = ParseDateFilter(to, inclusiveEndOfDay: true);
+    if (toDate is not null)
+    {
+        query = query.Where(s => s.CreatedAt < toDate);
+    }
+
+    return query;
+}
+
+// Parses a from/to filter as UTC. A date-only `to` (yyyy-MM-dd) means "through
+// the end of that day", so it becomes an exclusive bound at the next midnight.
+DateTimeOffset? ParseDateFilter(string? value, bool inclusiveEndOfDay)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return null;
+    }
+
+    if (!DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal, out var parsed))
+    {
+        return null;
+    }
+
+    if (inclusiveEndOfDay && DateTime.TryParseExact(value, "yyyy-MM-dd",
+            CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+    {
+        parsed = parsed.AddDays(1);
+    }
+
+    return parsed;
+}
+
+// Formats an export response: JSON array download, Excel workbook download, or a
+// 400 for any other format value.
+IResult ExportSubmissions(List<Submission> submissions, string format, SubmissionExcelExporter exporter)
+{
+    if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase))
+    {
+        var json = JsonSerializer.Serialize(submissions.Select(ToDto));
+        return Results.File(Encoding.UTF8.GetBytes(json), "application/json", "submissions.json");
+    }
+
+    if (string.Equals(format, "xlsx", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.File(exporter.BuildWorkbook(submissions),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "submissions.xlsx");
+    }
+
+    return Results.BadRequest(new ApiError("Export format must be 'xlsx' or 'json'."));
+}
+
+SubmissionDto ToDto(Submission s) =>
+    new(s.Id, s.FormId, s.UserId, s.User.Email, s.Data, s.CreatedAt);
+
 app.Run();
 
 /// <summary>Payload returned by the <c>/health</c> endpoint.</summary>
@@ -306,6 +531,14 @@ record CreateSpaceRequest(string Name);
 record UpdateSpaceRequest(string Name);
 record CreateFormRequest(string Name, string Schema);
 record UpdateFormRequest(string Name, string Schema);
+
+// --- Submission payloads (feature 07) ----------------------------------
+
+/// <summary>Submit body: the form's field values as a JSON object.</summary>
+record SubmitSubmissionRequest(JsonElement Data);
+
+/// <summary>A submission as exposed by the list/export APIs.</summary>
+record SubmissionDto(int Id, int FormId, int UserId, string UserEmail, string Data, DateTimeOffset CreatedAt);
 
 /// <summary>Uniform error payload (validation failures, etc.).</summary>
 record ApiError(string Message);
