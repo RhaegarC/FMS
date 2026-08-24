@@ -1,6 +1,6 @@
 # 04 — MSAL login in both portals
 
-Status: **Not started** (spec drafted 2026-08-06)
+Status: **Implemented and merged** via MR #6 (2026-08-24)
 
 ## Summary
 
