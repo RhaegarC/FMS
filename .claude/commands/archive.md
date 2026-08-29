@@ -3,7 +3,7 @@ description: Archive a completed feature file after its PR is merged to develop
 argument-hint: "[number]"
 ---
 
-You are executing the FMS `/archive` command (Phase 8 in `.claude/CLAUDE.md`).
+You are executing the FMS `/archive` command (Phase 8 of the `tdd-implement` agent — [.claude/agents/tdd-implement.md](.claude/agents/tdd-implement.md)).
 `$ARGUMENTS` is the feature number (e.g. `02`) — resolve it to
 `docs/features/<number>-<name>.md`.
 

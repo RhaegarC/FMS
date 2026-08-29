@@ -3,8 +3,9 @@ description: Implement a feature with TDD (branch → RED → GREEN → verify)
 argument-hint: "[number | feature-file | blank]"
 ---
 
-You are executing the FMS Scrum+TDD `/implement` command. Follow the workflow in
-`.claude/CLAUDE.md` (**Development Workflow — TDD with Scrum**). `$ARGUMENTS` is optional:
+You are executing the FMS Scrum+TDD `/implement` command. Follow the TDD workflow encoded
+in the `tdd-implement` agent — [.claude/agents/tdd-implement.md](.claude/agents/tdd-implement.md)
+(Phases 1–5 below; Phase 0 of the agent is the one-time foundation). `$ARGUMENTS` is optional:
 a feature number (e.g. `02`), a feature file path (e.g. `docs/features/02-entra-auth.md`),
 or blank.
 

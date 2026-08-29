@@ -1,6 +1,93 @@
 @Fms.Api_HostAddress = http://localhost:5149
 
-GET {{Fms.Api_HostAddress}}/weatherforecast/
+# Health (anonymous)
+GET {{Fms.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+# Swagger spec (dev)
+GET {{Fms.Api_HostAddress}}/swagger/v1/swagger.json
+Accept: application/json
+
+###
+
+# --- Authenticated calls need a bearer token (see AuthIntegrationTests for how to
+#     mint a self-issued RS256 token validated via Entra:TestSigningKey). ----
+
+# Current user profile
+GET {{Fms.Api_HostAddress}}/api/me
+Authorization: Bearer <token>
+Accept: application/json
+
+###
+
+# Space catalog
+GET {{Fms.Api_HostAddress}}/api/spaces
+Authorization: Bearer <token>
+Accept: application/json
+
+###
+
+POST {{Fms.Api_HostAddress}}/api/spaces
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "Finance"
+}
+
+###
+
+# Forms under a space
+GET {{Fms.Api_HostAddress}}/api/spaces/1/forms
+Authorization: Bearer <token>
+Accept: application/json
+
+###
+
+POST {{Fms.Api_HostAddress}}/api/spaces/1/forms
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "Expense Report",
+  "schema": {
+    "type": "object",
+    "properties": { "amount": { "type": "number" }, "vendor": { "type": "string" } },
+    "required": [ "amount", "vendor" ]
+  }
+}
+
+###
+
+# Submit to a form
+POST {{Fms.Api_HostAddress}}/api/forms/1/submissions
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "data": { "amount": 42.5, "vendor": "Acme" }
+}
+
+###
+
+# Own submissions (keyword/from/to/formId filters)
+GET {{Fms.Api_HostAddress}}/api/me/submissions?q=acme
+Authorization: Bearer <token>
+Accept: application/json
+
+###
+
+# Admin: all submissions + exports
+GET {{Fms.Api_HostAddress}}/api/submissions
+Authorization: Bearer <token>
+Accept: application/json
+
+###
+
+GET {{Fms.Api_HostAddress}}/api/submissions/export?format=json
+Authorization: Bearer <token>
 Accept: application/json
 
 ###

@@ -1,4 +1,4 @@
-using Fms.Api.Data.Entities;
+using Fms.Model.Entities;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Fms.Api.Auth;
