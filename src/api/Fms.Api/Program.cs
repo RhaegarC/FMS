@@ -108,7 +108,15 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    // Serve the Swagger UI at the root (bug 01) so a developer hitting the base URL
+    // (e.g. http://localhost:5149) lands on the interactive API docs instead of a 404.
+    // With RoutePrefix = "" the endpoint must be absolute (/swagger/v1/swagger.json) —
+    // a relative URL would resolve against "/" and the UI would fetch /v1/swagger.json (404).
+    app.UseSwaggerUI(options =>
+    {
+        options.RoutePrefix = string.Empty;
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "FMS API v1");
+    });
 }
 
 // Domain exceptions → HTTP status codes (Service layer throws, Api maps).

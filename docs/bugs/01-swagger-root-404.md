@@ -54,20 +54,28 @@ In [Program.cs](../../src/api/Fms.Api/Program.cs):
 
 So the base URL is simply unhandled.
 
-## Fix plan (proposed — not implemented)
+## Fix (implemented — PR #128, `fix/swagger-root-404`)
 
-One of:
+Serve the UI at the root AND pin the spec endpoint to its absolute path:
 
-- **Preferred:** serve the UI at the root:
-  `app.UseSwaggerUI(options => options.RoutePrefix = string.Empty);` — then
-  `http://localhost:5149` shows Swagger directly.
-- **Alternative:** redirect `/` to `/swagger` (a tiny `MapGet("/", ...)` that returns
-  `RedirectToRoute`/`Redirect` to `/swagger`), keeping the UI under `/swagger`.
+```csharp
+app.UseSwaggerUI(options =>
+{
+    options.RoutePrefix = string.Empty;
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "FMS API v1");
+});
+```
 
-The regression test should assert that `GET /` returns a Swagger-UI response
-(HTTP 200 HTML containing "Swagger UI") in the Development environment — see
-`Fms.Api.Test` (a `WebApplicationFactory<Program>` test with `Environment =
-Development`).
+**Gotcha caught during the fix:** `RoutePrefix = ""` alone is not enough — Swagger UI
+then resolves the default relative endpoint `v1/swagger.json` against `/` and fetches
+`http://localhost:5149/v1/swagger.json` (404 → "Fetch error" in the UI). The endpoint
+must be the absolute `/swagger/v1/swagger.json`, where `UseSwagger()` still serves the
+spec.
+
+Regression test `SwaggerUiRootTests.GetRoot_ServesSwaggerUiInDevelopment` asserts:
+`GET /` (following the `/` → `/index.html` redirect) returns 200 with "Swagger UI";
+`GET /index.js` (the UI's endpoint config) references `/swagger/v1/swagger.json`; and
+`GET /swagger/v1/swagger.json` returns 200.
 
 ## Close checklist
 
