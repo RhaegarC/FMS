@@ -6,4 +6,4 @@ Running tracker for reported bugs. One file per bug in `docs/bugs/NN-name.md`; r
 
 | # | Title | Severity | Component | Work item ID | Status |
 |---|---|---|---|---|---|
-| — | (none yet) | | | | |
+| 01 | Swagger page not reachable at `http://localhost:5149` | Low | Fms.Api (Program.cs) | [Bug #1](https://dev.azure.com/rhaegarc/APJ/_workitems/edit/1) | Reported |
