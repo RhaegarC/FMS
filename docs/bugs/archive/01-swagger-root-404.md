@@ -1,6 +1,6 @@
 # Bug 01 — Swagger page not reachable at `http://localhost:5149`
 
-Status: **Reported** (2026-08-30) — captured, **not yet fixed** (bug-fix workflow applies).
+Status: **Resolved** (2026-08-30) — fixed in PR #128 (`fix/swagger-root-404`); regression test added; ADO Bug #1 closed.
 
 ## Triage
 
@@ -79,8 +79,8 @@ Regression test `SwaggerUiRootTests.GetRoot_ServesSwaggerUiInDevelopment` assert
 
 ## Close checklist
 
-- [ ] Regression test added (RED) — `GET /` serves Swagger UI in Development.
-- [ ] Fix applied (GREEN) — preferred approach above.
-- [ ] `dotnet test src/api/Fms.slnx` green.
-- [ ] PR to `develop` (`fix:` commit type); merge with approval.
-- [ ] Move this file to `docs/bugs/archive/` after merge; close ADO Bug #1.
+- [x] Regression test added (RED) — `GET /` serves Swagger UI in Development.
+- [x] Fix applied (GREEN) — `RoutePrefix = ""` + absolute `SwaggerEndpoint`.
+- [x] `dotnet test src/api/Fms.slnx` green (127 tests).
+- [x] PR to `develop` (`fix:` commit type) — PR #128 merged.
+- [x] Moved this file to `docs/bugs/archive/`; ADO Bug #1 closed.
