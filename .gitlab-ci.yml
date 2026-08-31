@@ -1,0 +1,50 @@
+# GitLab CI — FMS backend API image build & push
+#
+# Trigger: a merge request is merged into `develop` or `master`. GitLab runs a
+# "push" pipeline on the target branch right after the merge commit lands, so the
+# `workflow:rules` below match exactly that. Manual "Run pipeline" runs (source
+# "web") on those two branches are also allowed, so a rebuild can be forced by
+# hand; every other source/branch is rejected (`when: never`).
+#
+# Output: a Docker image pushed to the project's GitLab Container Registry:
+#   registry.gitlab.apjcorp.com/mtr/team-9/fms/backend-api:develop   <- merged to develop
+#   registry.gitlab.apjcorp.com/mtr/team-9/fms/backend-api:latest    <- merged to master
+# Every image is additionally tagged with the merge commit's short SHA so a
+# specific build is always retrievable.
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_VERSION: "27"                       # image + dind service must share a major
+  IMAGE_NAME: "$CI_REGISTRY_IMAGE/backend-api"
+
+stages:
+  - build
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
+      variables:
+        IMAGE_TAG: "develop"
+    - if: '$CI_COMMIT_BRANCH == "master" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
+      variables:
+        IMAGE_TAG: "latest"
+    - when: never
+
+build-and-push-api:
+  stage: build
+  image: docker:${DOCKER_VERSION}
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - >-
+      docker build
+      --tag "$IMAGE_NAME:$IMAGE_TAG"
+      --tag "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+      --file src/api/Fms.Api/Dockerfile
+      .
+    - docker push "$IMAGE_NAME:$IMAGE_TAG"
+    - docker push "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
+    - if: '$CI_COMMIT_BRANCH == "master" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
