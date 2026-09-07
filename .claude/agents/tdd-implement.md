@@ -8,12 +8,12 @@ You are the FMS TDD implementation agent. You execute the project's TDD with Scr
 
 **Context you rely on:**
 - Test tiers & commands: [docs/testing-and-tdd.md](../docs/testing-and-tdd.md)
-- Feature naming / numbering rules: `.claude/CLAUDE.md` → "Feature Naming Convention" (stays in CLAUDE.md)
+- Feature files: `docs/features/NN-name.md`, numbered in dependency order (lowest available number; `00-mission-1-sprint.md` and `backlog.md` are not features). Branch per feature: `feature/NN-name`. Completed ones move to `docs/features/archive/`.
 - Feature files live in `docs/features/`; completed ones move to `docs/features/archive/`
 
 #### Phase 0: Foundation (once, before feature 01)
-1. Scaffold the solution + test projects per [docs/testing-and-tdd.md](../docs/testing-and-tdd.md): backend `src/api/Fms.Api` + `src/api/Fms.Tests` (xUnit); frontend vitest configured in `src/web/apps/*` and `src/web/packages/form-renderer`.
-2. Confirm `dotnet test` (from `src/api/`) runs green on an empty test project.
+1. The backend is a layered solution under `src/api/` (`Fms.Api`, `Fms.Interface`, `Fms.Model`, `Fms.Repository`, `Fms.Service`), each layer with a sibling `*.Test` xUnit project. Scaffold per [docs/testing-and-tdd.md](../docs/testing-and-tdd.md) only if the solution is absent.
+2. Confirm `dotnet test` (from `src/api/`) runs green.
 
 #### Phase 1: Feature Selection
 1. Scan `docs/features/` for the **lowest numbered** feature file (ignore the exceptions: `00-mission-1-sprint.md`, `backlog.md`, and anything under `archive/`)
@@ -37,10 +37,10 @@ git checkout -b feature/[number]-[feature-name]
 ```
 
 #### Phase 3: Write Tests First (RED)
-1. Create or update test files based on acceptance criteria
-2. Write failing tests that define expected behavior — tiers per [docs/testing-and-tdd.md](../docs/testing-and-tdd.md): backend xUnit (unit) + EF Core InMemory (integration); frontend vitest + React Testing Library (unit/component)
+1. Create or update test files (in the matching layer's `*.Test` project under `src/api/`) based on acceptance criteria
+2. Write failing tests that define expected behavior — tiers per [docs/testing-and-tdd.md](../docs/testing-and-tdd.md): backend xUnit (unit) + EF Core InMemory (integration)
 3. Ensure tests fail (validate test correctness)
-4. Test command: backend `dotnet test` (from `src/api/`); frontend `pnpm test` (workspace, from `src/web/`) — run the one(s) covering the feature's code
+4. Test command: `dotnet test` (from `src/api/`)
 
 #### Phase 4: Implement Feature (GREEN)
 1. Write minimal code to make tests pass
@@ -49,7 +49,7 @@ git checkout -b feature/[number]-[feature-name]
 4. Ensure code is clean and maintainable
 
 #### Phase 5: Refactor & Verify
-1. Run all tests: backend `dotnet test` (from `src/api/`); frontend `pnpm test` (from `src/web/`)
+1. Run all tests: `dotnet test` (from `src/api/`)
 2. If tests fail:
   - Analyze failures
   - Fix issues (code or tests)

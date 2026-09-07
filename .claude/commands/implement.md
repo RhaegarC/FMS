@@ -27,14 +27,13 @@ origin develop`), then create the branch: `git checkout -b feature/<number>-<nam
 (e.g. `feature/02-entra-auth`).
 
 **Phase 3 (RED)** — Write failing tests for the acceptance criteria, following the test
-tiers in `docs/testing-and-tdd.md` (backend xUnit unit + EF Core InMemory integration;
-frontend vitest + React Testing Library unit/component). Run the relevant suite (`dotnet
-test` / `pnpm test`) and confirm the new tests fail for the expected reason.
+tiers in `docs/testing-and-tdd.md` (backend xUnit unit + EF Core InMemory integration).
+Run `dotnet test` and confirm the new tests fail for the expected reason.
 
 **Phase 4 (GREEN)** — Implement the minimum code to make the tests pass. Follow existing
 code patterns and conventions. Add comments for complex logic.
 
-**Phase 5 (REFACTOR & VERIFY)** — Run the full suite (`dotnet test` / `pnpm test`) until all tests pass.
+**Phase 5 (REFACTOR & VERIFY)** — Run the full suite (`dotnet test`) until all tests pass.
 Refactor while keeping tests green. If the schema changed, update the data model in
 `docs/PRD.md` and the feature file.
 

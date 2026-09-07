@@ -17,12 +17,19 @@ fill them out and manage their own submissions — with space/dataset-level acce
 
 | Component | Tech | Responsibility |
 |---|---|---|
-| Admin portal | React (Vite), pnpm | Form config (JSON editor + live preview); view all submissions (search + export) |
-| User portal | React (Vite), pnpm | Dashboard of own submissions (search + export); fill & submit forms; read-only submission detail |
+| Web app (single portal) | React (Vite), pnpm | One role-gated app: **admin** — form config (JSON editor + live preview), view all submissions (search + export); **user** — dashboard of own submissions (search + export), fill & submit forms, read-only submission detail |
 | Backend | ASP.NET Core 10 | REST + OAuth 2.0 bearer + JSON; forms/submissions CRUD; remote-lookup proxy; authn/authz |
 | Database | PostgreSQL | One DB; `jsonb` for form schemas and submissions |
 
-Deployment (stage 1): all four services in **local Docker**, separate published ports, no reverse proxy.
+Deployment (stage 1): all three services in **local Docker**, separate published ports, no reverse proxy.
+
+## Frontend build
+
+UI screens are authored in **Figma Make**, which exports a React project used from `src/web/`;
+Figma Make produces the screens. The only hand-written frontend work is **integrating the exported
+app with the backend API** — auth (MSAL), API calls (via the generated `api-client` package), wiring
+responses into the exported components, and role gating. The shared packages under `src/web/packages/`
+(`api-client`, `auth`, …) exist for this integration. Both roles (admin/user) live in this single app.
 
 ## Decisions log
 
@@ -31,9 +38,9 @@ Every requirement decision from the grilling session, in order:
 | # | Decision | Resolution |
 |---|---|---|
 | 1 | Configuration model | **Schema-driven**: forms defined as JSON schema stored in DB |
-| 2 | System scope | Two portals (admin config + user submit), one backend, one DB |
-| 3 | Frontend structure | Two separate React apps |
-| 4 | Code sharing | Monorepo (pnpm workspace): `apps/admin` + `apps/user` + shared packages |
+| 2 | System scope | **Single frontend app** (admin config + user submit in one app), one backend, one DB |
+| 3 | Frontend structure | **One React app**; admin vs user is a role, not a separate app |
+| 4 | Code sharing | Monorepo (pnpm workspace): one app + shared packages |
 | 5 | Authentication | **Microsoft Entra ID** (OIDC); no credentials stored in DB |
 | 6 | Role assignment | Auto-provision user on first login; admin via `ADMIN_USER_IDS` seed; no user-management UI |
 | 7 | Backend stack | ASP.NET Core 10 (latest), containerized |
@@ -48,10 +55,11 @@ Every requirement decision from the grilling session, in order:
 | 16 | Cascading | `{fieldName}` placeholders in data-source URL; refetch on change |
 | 17 | Submission visibility | Stored as `jsonb`; admin sees all; user sees own only |
 | 18 | Export | **Excel (.xlsx) + JSON** |
-| 19 | User portal flow | Form list → fill → submit → dashboard; read-only submission detail |
+| 19 | User flow (single app) | Form list → fill → submit → dashboard; read-only submission detail |
 | 20 | Permission model | Single `permissions` table with `expression` column; SQL-editable; no web UI |
 | 21 | Permission attributes | `user.id`, `user.email`, `user.role` only — no Entra group claims |
-| 22 | Deployment | All apps + DB in local Docker (stage 1), separate ports |
+| 22 | Deployment | All services + DB in local Docker (stage 1), separate ports |
+| 23 | Frontend authoring | **Figma Make exports the React UI** into `src/web`; the only hand-written frontend code is integrating the exported app with the backend API (auth + `api-client` calls) |
 
 ## Data model
 
@@ -67,7 +75,7 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 
 **Access semantics**: a space grant = access to all forms under that space (e.g. `spaceA.*`); a form grant = that single form; effective access = union of space + form grants. Default deny.
 
-**Schema-change discipline**: when a form schema evolves, update this table (and any affected feature file) in the same PR.
+**Schema-change discipline**: when a form schema evolves, update this table in the same PR.
 
 ## Form schema model
 
@@ -92,7 +100,7 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 
 ## Authentication & authorization
 
-- **Authentication**: Entra ID (OIDC). Both React apps use MSAL; backend validates bearer tokens.
+- **Authentication**: Entra ID (OIDC). The single React app uses MSAL; backend validates bearer tokens.
 - **Roles**: `admin` (config + submit) and `user` (submit only). Stored on `users`, provisioned on first login, admin seeded via `ADMIN_USER_IDS` env var.
 - **Authorization for data access**: single `permissions` table:
   ```
@@ -106,18 +114,18 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 ## Submissions & export
 
 - Stored as `jsonb`, referencing form + submitting user.
-- User portal: dashboard of the user's own submissions, with keyword search over content + form/date filters, and Excel + JSON export.
-- Admin portal: submissions view across all users, same search + export.
+- **User**: dashboard of the user's own submissions, with keyword search over content + form/date filters, and Excel + JSON export.
+- **Admin**: submissions view across all users, same search + export.
 - Read-only submission detail rendered with the shared renderer in read-only mode.
 
 ## Deployment (stage 1)
 
-- `docker-compose` with four services: `postgres`, `backend` (ASP.NET Core 10), `admin-app` (nginx-served React build), `user-app` (nginx-served React build).
+- `docker-compose` with three services: `postgres`, `backend` (ASP.NET Core 10), `web-app` (nginx-served React build).
 - Separate published localhost ports; no reverse proxy yet.
 - EF Core migrations run at backend startup (DB created on first boot).
-- Entra app registration(s) with `http://localhost:<port>` redirect URIs required (one-time setup).
+- Entra app registration with `http://localhost:<port>` redirect URI required (one-time setup).
 - Config via `.env`: connection string, Entra tenant/clientId, `ADMIN_USER_IDS`, data-source URL policy, CORS.
-- SPA auth config (feature 04): each portal reads `VITE_ENTRA_CLIENT_ID`, `VITE_ENTRA_TENANT_ID` — and optionally `VITE_ENTRA_REDIRECT_URI` / `VITE_ENTRA_SCOPE` — from its own `.env` (see `src/web/apps/*/.env.example`).
+- SPA auth config: the app reads `VITE_ENTRA_CLIENT_ID`, `VITE_ENTRA_TENANT_ID` — and optionally `VITE_ENTRA_REDIRECT_URI` / `VITE_ENTRA_SCOPE` — from its `.env`.
 
 ## Out of scope / deferred
 
