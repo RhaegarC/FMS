@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Fms.Test/">
+    <Project Path="Fms.Api.Test/Fms.Api.Test.csproj" />
+    <Project Path="Fms.Repository.Test/Fms.Repository.Test.csproj" />
+    <Project Path="Fms.Service.Test/Fms.Service.Test.csproj" />
+  </Folder>
+  <Project Path="Fms.Api/Fms.Api.csproj" />
+  <Project Path="Fms.Interface/Fms.Interface.csproj" />
+  <Project Path="Fms.Model/Fms.Model.csproj" />
+  <Project Path="Fms.Repository/Fms.Repository.csproj" />
+  <Project Path="Fms.Service/Fms.Service.csproj" />
+</Solution>
