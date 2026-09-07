@@ -10,8 +10,12 @@ namespace Fms.Service.Test;
 /// </summary>
 public class PermissionExpressionTests
 {
+    // A uuid id is a string; expressions compare it as a quoted literal. (Contains a
+    // hex letter so case-insensitivity of the comparison is actually exercised.)
+    private const string UserId = "a0000000-0000-0000-0000-000000000007";
+
     private static PermissionSubject User(
-        int id = 7, string email = "alice@contoso.com", string role = "user") =>
+        string id = UserId, string email = "alice@contoso.com", string role = "user") =>
         new(id, email, role);
 
     [Theory]
@@ -50,10 +54,15 @@ public class PermissionExpressionTests
     }
 
     [Fact]
-    public void Equality_OnUserId_MatchesNumber()
+    public void Equality_OnUserId_MatchesUuidString()
     {
-        Assert.True(PermissionExpression.Evaluate("user.id = 7", User(id: 7)));
-        Assert.False(PermissionExpression.Evaluate("user.id = 99", User(id: 7)));
+        var subject = User();
+        Assert.True(PermissionExpression.Evaluate($"user.id = '{UserId}'", subject));
+        Assert.False(PermissionExpression.Evaluate(
+            "user.id = '00000000-0000-0000-0000-000000000099'", subject));
+        // uuid casing is not significant, like the DB uuid type.
+        Assert.True(PermissionExpression.Evaluate(
+            "user.id = 'A0000000-0000-0000-0000-000000000007'", subject));
     }
 
     [Fact]

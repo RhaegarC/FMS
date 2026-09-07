@@ -31,32 +31,32 @@ public class SpaceController(ICatalogService catalog) : FmsApiControllerBase
         return Created($"/api/spaces/{space.Id}", new SpaceDto(space.Id, space.Name));
     }
 
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:guid}")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<ActionResult<SpaceDto>> Update(int id, [FromBody] UpdateSpaceRequest request)
+    public async Task<ActionResult<SpaceDto>> Update(string id, [FromBody] UpdateSpaceRequest request)
     {
         var space = await catalog.UpdateSpaceAsync(id, request.Name);
         return Ok(new SpaceDto(space.Id, space.Name));
     }
 
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:guid}")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(string id)
     {
         await catalog.DeleteSpaceAsync(id);
         return NoContent();
     }
 
-    [HttpGet("{spaceId:int}/forms")]
-    public async Task<ActionResult<IEnumerable<FormDto>>> ListFormsInSpace(int spaceId)
+    [HttpGet("{spaceId:guid}/forms")]
+    public async Task<ActionResult<IEnumerable<FormDto>>> ListFormsInSpace(string spaceId)
     {
         var forms = await catalog.ListFormsInSpaceAsync(spaceId, CurrentUser);
         return Ok(forms.Select(DtoMapper.ToFormDto));
     }
 
-    [HttpPost("{spaceId:int}/forms")]
+    [HttpPost("{spaceId:guid}/forms")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<ActionResult<FormDto>> CreateForm(int spaceId, [FromBody] CreateFormRequest request)
+    public async Task<ActionResult<FormDto>> CreateForm(string spaceId, [FromBody] CreateFormRequest request)
     {
         var form = await catalog.CreateFormAsync(spaceId, request.Name, request.Schema);
         return Created($"/api/forms/{form.Id}", DtoMapper.ToFormDto(form));

@@ -9,12 +9,12 @@ namespace Fms.Model.Entities;
 /// </summary>
 public class Permission : IAuditable
 {
-    public int Id { get; set; }
+    public string Id { get; set; } = null!;
 
     /// <summary>Either <c>space</c> or <c>form</c>.</summary>
     public string ResourceType { get; set; } = null!;
 
-    /// <summary>Target id as text, or <c>"*"</c> for all resources of the type.</summary>
+    /// <summary>Target id as text (a uuid string), or <c>"*"</c> for all resources of the type.</summary>
     public string ResourceId { get; set; } = null!;
 
     public string Expression { get; set; } = null!;

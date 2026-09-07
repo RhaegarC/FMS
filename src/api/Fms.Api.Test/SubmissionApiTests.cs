@@ -115,15 +115,15 @@ public class SubmissionApiTests : IAsyncLifetime
     }
 
     /// <summary>Inserts a grant expression directly (feature 05 has no web UI).</summary>
-    private async Task GrantAsync(string resourceType, int resourceId, string expression)
+    private async Task GrantAsync(string resourceType, string resourceId, string expression)
     {
         await using var conn = new NpgsqlConnection(_pg.GetConnectionString());
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
-            "INSERT INTO permissions (resource_type, resource_id, expression) VALUES (@type, @id, @expr)",
+            "INSERT INTO permissions (\"resourceType\", \"resourceId\", expression) VALUES (@type, @id, @expr)",
             conn);
         cmd.Parameters.AddWithValue("type", resourceType);
-        cmd.Parameters.AddWithValue("id", resourceId.ToString());
+        cmd.Parameters.AddWithValue("id", resourceId);
         cmd.Parameters.AddWithValue("expr", expression);
         await cmd.ExecuteNonQueryAsync();
     }
@@ -144,24 +144,24 @@ public class SubmissionApiTests : IAsyncLifetime
     }
 
     private async Task<FormDto> CreateFormAsync(
-        HttpClient client, int spaceId, string name, string schema = ExpenseSchema)
+        HttpClient client, string spaceId, string name, string schema = ExpenseSchema)
     {
         var response = await client.PostAsJsonAsync($"/api/spaces/{spaceId}/forms", new { name, schema });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<FormDto>())!;
     }
 
-    private async Task<HttpResponseMessage> SubmitAsync(HttpClient client, int formId, string dataJson)
+    private async Task<HttpResponseMessage> SubmitAsync(HttpClient client, string formId, string dataJson)
     {
         var payload = new StringContent($$"""{"data": {{dataJson}}}""", Encoding.UTF8, "application/json");
         return await client.PostAsync($"/api/forms/{formId}/submissions", payload);
     }
 
-    private async Task<int> UserIdAsync(string oid)
+    private async Task<string> UserIdAsync(string oid)
     {
-        var rows = await QueryAsync($"SELECT id FROM users WHERE entra_object_id = '{oid}'");
+        var rows = await QueryAsync($"SELECT id FROM users WHERE \"entraObjectId\" = '{oid}'");
         Assert.Single(rows.Rows);
-        return (int)rows.Rows[0][0]!;
+        return rows.Rows[0][0]!.ToString()!; // uuid → string
     }
 
     /// <summary>Grants a form to the primary test user and returns it.</summary>
@@ -185,9 +185,9 @@ public class SubmissionApiTests : IAsyncLifetime
         return form;
     }
 
-    private sealed record SpaceDto(int Id, string Name);
-    private sealed record FormDto(int Id, int SpaceId, string Name, string Schema, DateTimeOffset UpdatedAt);
-    private sealed record SubmissionDto(int Id, int FormId, int UserId, string UserEmail, string Data, DateTimeOffset CreatedAt);
+    private sealed record SpaceDto(string Id, string Name);
+    private sealed record FormDto(string Id, string SpaceId, string Name, string Schema, DateTimeOffset UpdatedAt);
+    private sealed record SubmissionDto(string Id, string FormId, string UserId, string UserEmail, string Data, DateTimeOffset CreatedAt);
 
     // --- Submit: auth, permission, schema validation ------------------------
 
@@ -220,7 +220,10 @@ public class SubmissionApiTests : IAsyncLifetime
     {
         await ResetDataAsync();
         using var user = UserClient();
-        var response = await SubmitAsync(user, 999999, """{"amount":10,"vendor":"Acme"}""");
+        // A well-formed uuid with no matching form; the {formId:guid} route rejects
+        // non-uuid ids outright, so 999999 would 404 before the handler runs.
+        var response = await SubmitAsync(
+            user, "00000000-0000-0000-0000-000000000000", """{"amount":10,"vendor":"Acme"}""");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -235,16 +238,16 @@ public class SubmissionApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var submission = (await response.Content.ReadFromJsonAsync<SubmissionDto>())!;
-        Assert.True(submission.Id > 0);
+        Assert.True(Guid.TryParse(submission.Id, out _));
         Assert.Equal(form.Id, submission.FormId);
         Assert.Equal(UserEmail, submission.UserEmail);
 
         var userId = await UserIdAsync(UserOid);
         var rows = await QueryAsync(
-            $"SELECT form_id, user_id, data, created_on FROM submissions WHERE id = {submission.Id}");
+            $"SELECT \"formId\", \"userId\", data, \"createdOn\" FROM submissions WHERE id = '{submission.Id}'");
         Assert.Single(rows.Rows);
-        Assert.Equal(form.Id, (int)rows.Rows[0][0]!);
-        Assert.Equal(userId, (int)rows.Rows[0][1]!);
+        Assert.Equal(form.Id, rows.Rows[0][0]!.ToString());
+        Assert.Equal(userId, rows.Rows[0][1]!.ToString());
         Assert.Contains("Acme", rows.Rows[0][2]!.ToString());
         Assert.NotEqual(DBNull.Value, rows.Rows[0][3]);
     }
@@ -417,7 +420,7 @@ public class SubmissionApiTests : IAsyncLifetime
         var response = await SubmitAsync(user, form.Id, """{"amount":10,"vendor":"Acme"}""");
         var submission = (await response.Content.ReadFromJsonAsync<SubmissionDto>())!;
         // Pin the stored timestamp so the range query is deterministic.
-        await QueryAsync($"UPDATE submissions SET created_on = '2026-01-15 00:00:00+00' WHERE id = {submission.Id}");
+        await QueryAsync($"UPDATE submissions SET \"createdOn\" = '2026-01-15 00:00:00+00' WHERE id = '{submission.Id}'");
 
         var inside = await user.GetFromJsonAsync<List<SubmissionDto>>(
             "/api/me/submissions?from=2026-01-01&to=2026-01-31");

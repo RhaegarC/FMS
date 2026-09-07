@@ -12,17 +12,17 @@ namespace Fms.Api.Controllers;
 [Authorize]
 public class FormController(ICatalogService catalog) : FmsApiControllerBase
 {
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:guid}")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<ActionResult<FormDto>> Update(int id, [FromBody] UpdateFormRequest request)
+    public async Task<ActionResult<FormDto>> Update(string id, [FromBody] UpdateFormRequest request)
     {
         var form = await catalog.UpdateFormAsync(id, request.Name, request.Schema);
         return Ok(DtoMapper.ToFormDto(form));
     }
 
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:guid}")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(string id)
     {
         await catalog.DeleteFormAsync(id);
         return NoContent();

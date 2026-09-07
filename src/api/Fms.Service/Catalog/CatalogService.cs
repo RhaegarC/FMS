@@ -42,7 +42,7 @@ public sealed class CatalogService(
         return space;
     }
 
-    public async Task<Space> UpdateSpaceAsync(int id, string name, CancellationToken cancellationToken = default)
+    public async Task<Space> UpdateSpaceAsync(string id, string name, CancellationToken cancellationToken = default)
     {
         var space = await spaces.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Space {id} does not exist.");
@@ -56,7 +56,7 @@ public sealed class CatalogService(
         return space;
     }
 
-    public async Task DeleteSpaceAsync(int id, CancellationToken cancellationToken = default)
+    public async Task DeleteSpaceAsync(string id, CancellationToken cancellationToken = default)
     {
         var space = await spaces.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Space {id} does not exist.");
@@ -64,7 +64,7 @@ public sealed class CatalogService(
         await spaces.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<List<Form>> ListFormsInSpaceAsync(int spaceId, User user, CancellationToken cancellationToken = default)
+    public async Task<List<Form>> ListFormsInSpaceAsync(string spaceId, User user, CancellationToken cancellationToken = default)
     {
         if (!await spaces.ExistsAsync(spaceId, cancellationToken))
         {
@@ -82,7 +82,7 @@ public sealed class CatalogService(
         return all.Where(f => evaluator.CanAccessForm(subject, grants, f.Id, f.SpaceId)).ToList();
     }
 
-    public async Task<Form> CreateFormAsync(int spaceId, string name, string schema, CancellationToken cancellationToken = default)
+    public async Task<Form> CreateFormAsync(string spaceId, string name, string schema, CancellationToken cancellationToken = default)
     {
         if (!await spaces.ExistsAsync(spaceId, cancellationToken))
         {
@@ -110,7 +110,7 @@ public sealed class CatalogService(
         return form;
     }
 
-    public async Task<Form> UpdateFormAsync(int id, string name, string schema, CancellationToken cancellationToken = default)
+    public async Task<Form> UpdateFormAsync(string id, string name, string schema, CancellationToken cancellationToken = default)
     {
         var form = await forms.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Form {id} does not exist.");
@@ -131,7 +131,7 @@ public sealed class CatalogService(
         return form;
     }
 
-    public async Task DeleteFormAsync(int id, CancellationToken cancellationToken = default)
+    public async Task DeleteFormAsync(string id, CancellationToken cancellationToken = default)
     {
         var form = await forms.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"Form {id} does not exist.");

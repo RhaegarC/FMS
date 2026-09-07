@@ -7,9 +7,9 @@ public interface ISpaceRepository
 {
     Task<List<Space>> ListAllOrderedAsync(CancellationToken cancellationToken = default);
 
-    Task<Space?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<Space?> GetByIdAsync(string id, CancellationToken cancellationToken = default);
 
-    Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(string id, CancellationToken cancellationToken = default);
 
     void Add(Space space);
 

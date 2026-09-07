@@ -1,0 +1,11 @@
+{
+  "title": "FMS",
+  "description": "This web application streamlines the creation of user-friendly interfaces, enabling designers and developers to efficiently build and prototype web UIs.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

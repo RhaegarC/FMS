@@ -23,9 +23,9 @@ namespace Fms.Api.Controllers;
 public class SubmissionController(
     ISubmissionService submissions, ISubmissionExcelExporter exporter) : FmsApiControllerBase
 {
-    [HttpPost("forms/{formId:int}/submissions")]
+    [HttpPost("forms/{formId:guid}/submissions")]
     public async Task<ActionResult<SubmissionDto>> Submit(
-        int formId, [FromBody] SubmitSubmissionRequest request)
+        string formId, [FromBody] SubmitSubmissionRequest request)
     {
         // A missing/empty `data` body (JsonElement Undefined/Null) is rejected here — the
         // shape only exists at the HTTP boundary; the service works with raw JSON text.
@@ -44,7 +44,7 @@ public class SubmissionController(
 
     [HttpGet("me/submissions")]
     public async Task<ActionResult<IEnumerable<SubmissionDto>>> ListMy(
-        [FromQuery] int? formId, [FromQuery] string? from, [FromQuery] string? to, [FromQuery] string? q)
+        [FromQuery] string? formId, [FromQuery] string? from, [FromQuery] string? to, [FromQuery] string? q)
     {
         var list = await submissions.ListMyAsync(CurrentUser, ParseSubmissionQuery(formId, from, to, q));
         return Ok(list.Select(DtoMapper.ToDto));
@@ -53,7 +53,7 @@ public class SubmissionController(
     [HttpGet("submissions")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<IEnumerable<SubmissionDto>>> ListAll(
-        [FromQuery] int? formId, [FromQuery] string? from, [FromQuery] string? to, [FromQuery] string? q)
+        [FromQuery] string? formId, [FromQuery] string? from, [FromQuery] string? to, [FromQuery] string? q)
     {
         var list = await submissions.ListAllAsync(ParseSubmissionQuery(formId, from, to, q));
         return Ok(list.Select(DtoMapper.ToDto));
@@ -62,7 +62,7 @@ public class SubmissionController(
     [HttpGet("submissions/export")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> ExportAll(
-        [FromQuery] string? format, [FromQuery] int? formId,
+        [FromQuery] string? format, [FromQuery] string? formId,
         [FromQuery] string? from, [FromQuery] string? to, [FromQuery] string? q)
     {
         var list = await submissions.ListAllAsync(ParseSubmissionQuery(formId, from, to, q));
@@ -71,7 +71,7 @@ public class SubmissionController(
 
     [HttpGet("me/submissions/export")]
     public async Task<IActionResult> ExportMy(
-        [FromQuery] string? format, [FromQuery] int? formId,
+        [FromQuery] string? format, [FromQuery] string? formId,
         [FromQuery] string? from, [FromQuery] string? to, [FromQuery] string? q)
     {
         var list = await submissions.ListMyAsync(CurrentUser, ParseSubmissionQuery(formId, from, to, q));
@@ -81,13 +81,17 @@ public class SubmissionController(
     // --- Local helpers ------------------------------------------------------
 
     // Builds the submission query contract. Date filters are parsed here (HTTP concern);
-    // the parsed UTC bounds go to the repository via the query object.
+    // the parsed UTC bounds go to the repository via the query object. A formId filter
+    // must be a uuid string; anything else is ignored (treated as no filter).
     private static SubmissionQuery ParseSubmissionQuery(
-        int? formId, string? from, string? to, string? keyword) =>
-        new(formId,
+        string? formId, string? from, string? to, string? keyword) =>
+        new(ParseFormIdFilter(formId),
             ParseDateFilter(from, inclusiveEndOfDay: false),
             ParseDateFilter(to, inclusiveEndOfDay: true),
             keyword);
+
+    private static string? ParseFormIdFilter(string? formId) =>
+        !string.IsNullOrWhiteSpace(formId) && Guid.TryParse(formId, out _) ? formId : null;
 
     // Parses a from/to filter as UTC. A date-only `to` (yyyy-MM-dd) means "through
     // the end of that day", so it becomes an exclusive bound at the next midnight.

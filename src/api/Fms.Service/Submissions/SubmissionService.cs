@@ -16,7 +16,7 @@ public sealed class SubmissionService(
     IPermissionEvaluator evaluator,
     IJsonSchemaValidator schemaValidator) : ISubmissionService
 {
-    public async Task<Submission> SubmitAsync(int formId, User user, string data, CancellationToken cancellationToken = default)
+    public async Task<Submission> SubmitAsync(string formId, User user, string data, CancellationToken cancellationToken = default)
     {
         var form = await forms.GetByIdAsync(formId, cancellationToken)
             ?? throw new NotFoundException($"Form {formId} does not exist.");
@@ -70,7 +70,7 @@ public sealed class SubmissionService(
     // Ids of forms the caller can access. Permission evaluation is in-memory (the
     // feature-05 expression grammar is the security boundary), so the candidate set
     // is loaded then filtered — same approach as the space/form list endpoints.
-    private async Task<HashSet<int>> AccessibleFormIdsAsync(User user, CancellationToken cancellationToken)
+    private async Task<HashSet<string>> AccessibleFormIdsAsync(User user, CancellationToken cancellationToken)
     {
         var grants = await permissions.ListAllAsync(cancellationToken);
         var subject = PermissionEvaluator.ToSubject(user);

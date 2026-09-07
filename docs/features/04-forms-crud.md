@@ -22,7 +22,7 @@ bad schema is rejected at save time rather than at fill time.
 ## Acceptance criteria
 
 - [ ] Admin (`role = admin`) can create/update/get/list a form under a space; non-admin gets 403 on write
-- [ ] Form = `id`, `space_id`, `name`, `schema` (jsonb), `updated_at`; mutable single definition (no versions)
+- [ ] Form = `id` (uuid), `spaceId`, `name`, `schema` (jsonb), `lastModifiedOn`; mutable single definition (no versions)
 - [ ] Save validates the schema: valid draft 2020-12; standard keywords accepted incl. `if`/`then`/`else`; unknown custom keywords rejected except `x-dataSource`
 - [ ] Schema updates follow the PRD schema-change discipline (PRD data-model table updated in the same PR)
 

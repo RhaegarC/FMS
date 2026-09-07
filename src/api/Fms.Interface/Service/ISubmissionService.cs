@@ -7,7 +7,7 @@ namespace Fms.Interface.Service;
 /// scoped by role and the feature-05 evaluator, and the shared query contract for export.</summary>
 public interface ISubmissionService
 {
-    Task<Submission> SubmitAsync(int formId, User user, string data, CancellationToken cancellationToken = default);
+    Task<Submission> SubmitAsync(string formId, User user, string data, CancellationToken cancellationToken = default);
 
     Task<List<Submission>> ListMyAsync(User user, SubmissionQuery query, CancellationToken cancellationToken = default);
 

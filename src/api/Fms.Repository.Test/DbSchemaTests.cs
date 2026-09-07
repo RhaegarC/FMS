@@ -30,14 +30,13 @@ public class DbSchemaTests : IAsyncLifetime
     public async Task DisposeAsync() => await _pg.DisposeAsync();
 
     /// <summary>Applies all migrations in the Repository assembly to the ephemeral DB.
-    /// The context is configured exactly as <c>AddFmsPersistence</c> configures it
-    /// (snake_case naming convention included), so the runtime model matches the
-    /// migration snapshot and EF's pending-model-changes check passes.</summary>
+    /// The context is configured as <c>AddFmsPersistence</c> configures it (column
+    /// names are camelCase, mapped explicitly in the DbContext — no snake_case
+    /// naming convention), so the applied schema matches the runtime model.</summary>
     private async Task MigrateAsync()
     {
         var options = new DbContextOptionsBuilder<FmsDbContext>()
             .UseNpgsql(_pg.GetConnectionString())
-            .UseSnakeCaseNamingConvention()
             .Options;
         await using var db = new FmsDbContext(options);
         await db.Database.MigrateAsync();
@@ -87,16 +86,25 @@ public class DbSchemaTests : IAsyncLifetime
         Assert.Equal("jsonb", map["forms.schema"]);
         Assert.Equal("jsonb", map["submissions.data"]);
 
+        // Column names are camelCase (backend-standard: no underscores) and every
+        // data table's primary key is a uuid (`id`, default gen_random_uuid()).
+        foreach (var table in new[] { "users", "spaces", "forms", "submissions", "permissions" })
+        {
+            Assert.True(
+                map.TryGetValue($"{table}.id", out var idType) && idType == "uuid",
+                $"{table}.id must be a uuid column (was {(idType is null ? "missing" : idType)})");
+        }
+
         // users key fields (PRD data model)
-        foreach (var col in new[] { "entra_object_id", "email", "name", "role" })
+        foreach (var col in new[] { "entraObjectId", "email", "name", "role" })
         {
             Assert.True(map.ContainsKey($"users.{col}"), $"users.{col} column missing");
         }
 
         // relational columns
-        foreach (var col in new[] { "spaces.name", "forms.space_id", "forms.name",
-                                    "submissions.form_id", "submissions.user_id",
-                                    "permissions.resource_type", "permissions.resource_id",
+        foreach (var col in new[] { "spaces.name", "forms.spaceId", "forms.name",
+                                    "submissions.formId", "submissions.userId",
+                                    "permissions.resourceType", "permissions.resourceId",
                                     "permissions.expression" })
         {
             Assert.True(map.ContainsKey(col), $"{col} column missing");
@@ -105,7 +113,7 @@ public class DbSchemaTests : IAsyncLifetime
         // audit columns (backend-standard §6.1.1) on every table
         foreach (var table in new[] { "users", "spaces", "forms", "submissions", "permissions" })
         {
-            foreach (var col in new[] { "created_by", "created_on", "last_modified_by", "last_modified_on" })
+            foreach (var col in new[] { "createdBy", "createdOn", "lastModifiedBy", "lastModifiedOn" })
             {
                 Assert.True(map.ContainsKey($"{table}.{col}"), $"{table}.{col} column missing");
             }

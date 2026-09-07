@@ -20,7 +20,8 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 
 // Current-user provider (backend-standard §6.1.1): the Repository layer's audit
-// interceptor stamps created_*/last_modified_* from the authenticated principal.
+// interceptor stamps createdBy/createdOn + lastModifiedBy/lastModifiedOn from the
+// authenticated principal.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserProvider, HttpContextCurrentUserProvider>();
 
@@ -33,6 +34,18 @@ builder.Services.AddFmsPersistence(builder.Configuration.GetConnectionString("Po
 
 // Business logic (Service layer, backend-standard §4.3) — all by interface.
 builder.Services.AddFmsServices();
+
+// CORS (feature 01 foundation): allow the single frontend app's origin(s), read from
+// configuration "CORS:AllowedOrigins" (env CORS__AllowedOrigins / appsettings.Development).
+// No origins configured => the middleware is not registered (backend-only tooling).
+var corsOrigins = builder.Configuration["CORS:AllowedOrigins"];
+if (!string.IsNullOrWhiteSpace(corsOrigins))
+{
+    var corsOriginsList = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    builder.Services.AddCors(options =>
+        options.AddPolicy("WebApp", policy =>
+            policy.WithOrigins(corsOriginsList).AllowAnyHeader().AllowAnyMethod()));
+}
 
 // Entra ID bearer authentication (feature 03). Two configuration paths:
 //  - Production: Entra:TenantId + Entra:ClientId — OIDC metadata discovery
@@ -122,6 +135,11 @@ if (app.Environment.IsDevelopment())
 // Domain exceptions → HTTP status codes (Service layer throws, Api maps).
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
+// Allow the configured frontend origin(s) to call the API cross-origin (feature 01).
+if (!string.IsNullOrWhiteSpace(corsOrigins))
+{
+    app.UseCors("WebApp");
+}
 app.UseAuthentication();
 // Provision a `users` row for authenticated principals before authorization runs,
 // so protected controllers can read the current Fms user from HttpContext.Items.

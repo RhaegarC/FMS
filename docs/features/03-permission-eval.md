@@ -21,7 +21,7 @@ so that access is auditable and defaults to closed.
 
 ## Acceptance criteria
 
-- [ ] `permissions` rows: `resource_type` (`space`|`form`), `resource_id` (`*`|uuid-as-text), `expression` (text)
+- [ ] `permissions` rows: `resourceType` (`space`|`form`), `resourceId` (`*`|uuid-as-text), `expression` (text)
 - [ ] A grant whose expression is true for the caller grants access; **no matching true row → deny**
 - [ ] A `space` grant covers every form under that space; effective access = union of space + form grants
 - [ ] Expressions may reference only `user.id`, `user.email`, `user.role`

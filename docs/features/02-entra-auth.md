@@ -22,7 +22,7 @@ on every call, so I never maintain a separate credential and my role is always c
 ## Acceptance criteria
 
 - [ ] Protected endpoints reject requests with a missing, invalid, or non-Entra bearer token (401)
-- [ ] Valid Entra token → caller identity resolved; first-ever login auto-provisions `users` (unique `entra_object_id`, `email`, `name`, default `role = 'user'`)
+- [ ] Valid Entra token → caller identity resolved; first-ever login auto-provisions `users` (unique `entraObjectId`, `email`, `name`, default `role = 'user'`)
 - [ ] First login of an email listed in `ADMIN_USER_IDS` seeds/provisions that user as `admin`
 - [ ] A `whoami`/`me` endpoint returns the caller's `id`, `email`, and `role`
 - [ ] No credentials are stored in the DB (Entra is the only identity source)

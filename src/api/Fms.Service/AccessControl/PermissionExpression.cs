@@ -343,14 +343,16 @@ public static class PermissionExpression
         public abstract bool Eval(PermissionSubject subject);
     }
 
-    /// <summary>Equality/inequality of an attribute against a literal value.</summary>
+    /// <summary>Equality/inequality of an attribute against a literal value. <c>user.id</c>
+    /// is a uuid string, so ids are written as quoted string literals (<c>user.id = '…'</c>);
+    /// comparison is case-insensitive (uuid casing is not significant).</summary>
     private sealed class CompareNode(Attr attr, bool negated, string value) : Node
     {
         public override bool Eval(PermissionSubject subject)
         {
             var matches = attr switch
             {
-                Attr.Id => int.TryParse(value, out var n) && n == subject.Id,
+                Attr.Id => string.Equals(value, subject.Id, StringComparison.OrdinalIgnoreCase),
                 Attr.Email => value == subject.Email,
                 Attr.Role => value == subject.Role,
                 _ => false,
@@ -389,7 +391,7 @@ public static class PermissionExpression
         {
             Attr.Email => values.Contains(subject.Email, StringComparer.Ordinal),
             Attr.Role => values.Contains(subject.Role, StringComparer.Ordinal),
-            Attr.Id => values.Any(v => int.TryParse(v, out var n) && n == subject.Id),
+            Attr.Id => values.Contains(subject.Id, StringComparer.OrdinalIgnoreCase),
             _ => false,
         };
     }

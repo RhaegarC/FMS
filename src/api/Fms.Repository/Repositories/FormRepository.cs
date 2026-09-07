@@ -7,7 +7,7 @@ namespace Fms.Repository.Repositories;
 /// <summary>Data access for the <c>forms</c> table.</summary>
 public sealed class FormRepository(FmsDbContext db) : IFormRepository
 {
-    public Task<List<Form>> ListBySpaceOrderedAsync(int spaceId, CancellationToken cancellationToken = default)
+    public Task<List<Form>> ListBySpaceOrderedAsync(string spaceId, CancellationToken cancellationToken = default)
         => db.Forms.AsNoTracking()
             .Where(f => f.SpaceId == spaceId)
             .OrderBy(f => f.Name)
@@ -16,9 +16,12 @@ public sealed class FormRepository(FmsDbContext db) : IFormRepository
     public Task<List<Form>> ListAllAsync(CancellationToken cancellationToken = default)
         => db.Forms.AsNoTracking().ToListAsync(cancellationToken);
 
-    // Tracked so mutations (update/delete) persist on SaveChanges.
-    public Task<Form?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-        => db.Forms.FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
+    // Tracked so mutations (update/delete) persist on SaveChanges. Ids are uuid strings;
+    // a malformed id is treated as not-found rather than a uuid-parameter conversion error.
+    public Task<Form?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
+        => Guid.TryParse(id, out _)
+            ? db.Forms.FirstOrDefaultAsync(f => f.Id == id, cancellationToken)
+            : Task.FromResult<Form?>(null);
 
     public void Add(Form form) => db.Forms.Add(form);
 

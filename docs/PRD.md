@@ -21,15 +21,16 @@ fill them out and manage their own submissions — with space/dataset-level acce
 | Backend | ASP.NET Core 10 | REST + OAuth 2.0 bearer + JSON; forms/submissions CRUD; remote-lookup proxy; authn/authz |
 | Database | PostgreSQL | One DB; `jsonb` for form schemas and submissions |
 
-Deployment (stage 1): all three services in **local Docker**, separate published ports, no reverse proxy.
+Deployment (stage 1): **local Docker**, separate published ports, no reverse proxy — Postgres runs as its own container; `docker-compose` runs the `backend` now (a `web-app` joins at frontend integration).
 
 ## Frontend build
 
 UI screens are authored in **Figma Make**, which exports a React project used from `src/web/`;
 Figma Make produces the screens. The only hand-written frontend work is **integrating the exported
 app with the backend API** — auth (MSAL), API calls (via the generated `api-client` package), wiring
-responses into the exported components, and role gating. The shared packages under `src/web/packages/`
-(`api-client`, `auth`, …) exist for this integration. Both roles (admin/user) live in this single app.
+responses into the exported components, and role gating. The export is a single flat Vite app under
+`src/web/` (no monorepo); the integration glue — auth, generated `api-client` — is added inside that
+app. Both roles (admin/user) live in this single app.
 
 ## Decisions log
 
@@ -40,12 +41,12 @@ Every requirement decision from the grilling session, in order:
 | 1 | Configuration model | **Schema-driven**: forms defined as JSON schema stored in DB |
 | 2 | System scope | **Single frontend app** (admin config + user submit in one app), one backend, one DB |
 | 3 | Frontend structure | **One React app**; admin vs user is a role, not a separate app |
-| 4 | Code sharing | Monorepo (pnpm workspace): one app + shared packages |
+| 4 | Code sharing | **One flat Vite app** — the Figma Make export at `src/web/` is a single package; no monorepo/workspace |
 | 5 | Authentication | **Microsoft Entra ID** (OIDC); no credentials stored in DB |
 | 6 | Role assignment | Auto-provision user on first login; admin via `ADMIN_USER_IDS` seed; no user-management UI |
 | 7 | Backend stack | ASP.NET Core 10 (latest), containerized |
 | 8 | Database | PostgreSQL with `jsonb` |
-| 9 | Frontend↔backend contract | REST + OAuth 2.0 + JSON; **OpenAPI codegen** (Swashbuckle → `packages/api-client`) |
+| 9 | Frontend↔backend contract | REST + OAuth 2.0 + JSON; **OpenAPI codegen** (Swashbuckle → client generated into the `src/web` app) |
 | 10 | Schema format | **Standard JSON Schema only** (draft 2020-12); layout inferred by renderer |
 | 11 | Conditional/dynamic fields | **In first milestone**: `if`/`then`/`else`, reactive renderer |
 | 12 | Versioning | **Mutable single definition** — no versions |
@@ -67,13 +68,15 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 
 | Entity | Table | Key fields |
 |---|---|---|
-| User | `users` | `id` (PK), `entra_object_id` (unique), `email`, `name`, `role` (`admin` \| `user`) |
-| Space | `spaces` | `id` (PK), `name` |
-| Form (Dataset) | `forms` | `id` (PK), `space_id` (FK → spaces), `name`, `schema` (jsonb), `updated_at` |
-| Submission | `submissions` | `id` (PK), `form_id` (FK → forms), `user_id` (FK → users), `data` (jsonb), `created_at` |
-| Permission | `permissions` | `id` (PK), `resource_type` (`space` \| `form`), `resource_id` (`*` or the target's `id` as text), `expression` (text) |
+| User | `users` | `id` (PK, uuid), `entraObjectId` (unique), `email`, `name`, `role` (`admin` \| `user`) |
+| Space | `spaces` | `id` (PK, uuid), `name` |
+| Form (Dataset) | `forms` | `id` (PK, uuid), `spaceId` (FK → spaces), `name`, `schema` (jsonb), `lastModifiedOn` |
+| Submission | `submissions` | `id` (PK, uuid), `formId` (FK → forms), `userId` (FK → users), `data` (jsonb), `createdOn` |
+| Permission | `permissions` | `id` (PK, uuid), `resourceType` (`space` \| `form`), `resourceId` (`*` or the target's `id` as text), `expression` (text) |
 
 **Access semantics**: a space grant = access to all forms under that space (e.g. `spaceA.*`); a form grant = that single form; effective access = union of space + form grants. Default deny.
+
+**Column conventions**: column names are camelCase throughout (no underscores); primary and foreign keys are Postgres `uuid` columns surfaced in .NET and JSON as strings, generated via `gen_random_uuid()` — see docs/backend-standard.md §6.1.1.
 
 **Schema-change discipline**: when a form schema evolves, update this table in the same PR.
 
@@ -104,7 +107,7 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 - **Roles**: `admin` (config + submit) and `user` (submit only). Stored on `users`, provisioned on first login, admin seeded via `ADMIN_USER_IDS` env var.
 - **Authorization for data access**: single `permissions` table:
   ```
-  id, resource_type ('space' | 'form'), resource_id (uuid | '*'), expression (text)
+  id, resourceType ('space' | 'form'), resourceId (uuid | '*'), expression (text)
   ```
   - `expression` is a SQL predicate evaluated against the requesting user's attributes (`user.id`, `user.email`, `user.role`) at request time. Admin-written/trusted input, like a SQL view.
   - Access granted iff a matching permission row's expression is true for the caller. **Default deny.**
@@ -120,7 +123,7 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 
 ## Deployment (stage 1)
 
-- `docker-compose` with three services: `postgres`, `backend` (ASP.NET Core 10), `web-app` (nginx-served React build).
+- `docker-compose` runs the `backend` (ASP.NET Core 10); Postgres runs as its own standalone Docker container (not in compose); a single `web-app` (nginx-served React build of the Figma export) is added at frontend integration.
 - Separate published localhost ports; no reverse proxy yet.
 - EF Core migrations run at backend startup (DB created on first boot).
 - Entra app registration with `http://localhost:<port>` redirect URI required (one-time setup).

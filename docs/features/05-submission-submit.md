@@ -23,7 +23,7 @@ that form — but only if they satisfy the schema the admin defined.
 
 - [ ] Only a user with a true grant for the form can submit to it (default deny otherwise → 403)
 - [ ] Submitted data is validated against the form schema; invalid → 400 with per-field errors
-- [ ] A valid submission is stored: `data` (jsonb), `form_id`, `user_id`, `created_at`
+- [ ] A valid submission is stored: `data` (jsonb), `formId`, `userId`, `createdOn`
 - [ ] The response returns the created submission `id` (detail view comes in 06)
 
 ## Tests (TDD)

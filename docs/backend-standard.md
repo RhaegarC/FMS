@@ -156,38 +156,46 @@ Dependency direction (see §3) forms a clean acyclic graph:
   (e.g. `User`, `Space`, `Form`, `Submission`, `Permission` in FMS).
 - `Model` MUST NOT reference EF Core, ASP.NET, or the other layers.
 
-#### 6.1.1 Audit columns — MUST
+#### 6.1.1 Data-table skeleton: uuid `id` + audit columns — MUST
 
-> **Rule: every table carries the same four audit columns, and the values are set
+> **Rule: every data table carries a `uuid` primary-key `id` column plus the same four
+> audit columns. The key is generated for the row; the audit values are set
 > automatically by the Repository layer — never by handlers.**
 
-Every entity implements `IAuditable` and therefore every table has exactly these four
-columns:
+Every data table implements `IAuditable` and therefore has the same `id` plus four audit
+columns (column names are camelCase — no underscores anywhere, see §7):
 
-| Column | Type | Constraint | Meaning |
-|---|---|---|---|
-| `created_by` | `text` | nullable | Entra object id (AAD GUID) of the creator — the same value stored on the user row |
-| `created_on` | `timestamptz` | NOT NULL, default `now()` | When the row was created |
-| `last_modified_by` | `text` | nullable | Entra object id (AAD GUID) of the last modifier |
-| `last_modified_on` | `timestamptz` | NOT NULL, default `now()` | When the row was last modified |
+| Column | CLR type | DB type | Constraint | Meaning |
+|---|---|---|---|---|
+| `id` | `string` | `uuid` | PK, NOT NULL, default `gen_random_uuid()` | Primary key — a uuid, exposed in .NET and APIs as a `string` |
+| `createdBy` | `string?` | `text` | nullable | Entra object id (AAD GUID) of the creator — the same value stored on the user row |
+| `createdOn` | `DateTimeOffset` | `timestamptz` | NOT NULL, default `now()` | When the row was created |
+| `lastModifiedBy` | `string?` | `text` | nullable | Entra object id (AAD GUID) of the last modifier |
+| `lastModifiedOn` | `DateTimeOffset` | `timestamptz` | NOT NULL, default `now()` | When the row was last modified |
 
 - **Actor identity** is the Microsoft Entra ID object id (AAD GUID) — the same value
   stored on the user's own row. It is nullable `text`, **no FK**: it identifies an
   external identity provider's subject, not a row in this database.
-- **Who sets them** — the **Repository `SaveChanges` interceptor**, the single source of
-  truth. It reads the current actor from an `ICurrentUserProvider` (an interface in
-  `Interface`, implemented in `Api` from the authenticated request) and stamps:
-  `Added` → all four (`created_by ??= actor` so an already-set value wins, and system
-  rows without a request actor stay null); `Modified` → `last_modified_*` only.
-- **Handlers never set audit columns** — no service or controller assigns `CreatedOn` /
-  `LastModifiedOn` / actor values; if a new write path forgets them, the interceptor
-  still fills them.
-- **DB default `now()`** keeps direct SQL inserts consistent (e.g. data seeding,
-  migrations, ops fixes) without a code path.
-- Mapping is centralized via a single `ConfigureAudit<TEntity>` helper in the
-  `DbContext`'s `OnModelCreating`, applied to every `IAuditable` entity.
+- **`id` generation** — the DB default `gen_random_uuid()` produces the key. A
+  `string ⇄ Guid` EF value converter maps the CLR `string` property onto the `uuid`
+  column and EF reads the generated value back after insert. Foreign keys to such
+  tables (`spaceId`, `formId`, `userId`) are the same `uuid` column / CLR `string`.
+- **Who sets the audit values** — the **Repository `SaveChanges` interceptor**, the
+  single source of truth. It reads the current actor from an `ICurrentUserProvider` (an
+  interface in `Interface`, implemented in `Api` from the authenticated request) and
+  stamps: `Added` → all four (`createdBy ??= actor` so an already-set value wins, and
+  system rows without a request actor stay null); `Modified` → `lastModifiedBy` /
+  `lastModifiedOn` only.
+- **Handlers never set the id or the audit columns** — no service or controller assigns
+  `Id`, `CreatedOn`, `LastModifiedOn`, or the actor values; if a new write path forgets
+  them, the key generator and the interceptor still fill them.
+- **DB defaults `gen_random_uuid()` and `now()`** keep direct SQL inserts consistent
+  (e.g. data seeding, migrations, ops fixes) without a code path.
+- Mapping is centralized in helpers in the `DbContext`'s `OnModelCreating` — a shared
+  uuid/`id` mapper for the primary and foreign keys and a `ConfigureAudit<TEntity>`
+  helper for the audit columns — applied to every `IAuditable` entity.
 - Public API DTOs may expose timestamps under friendlier names — e.g. FMS exposes
-  `last_modified_on` as `FormDto.UpdatedAt` and `created_on` as
+  `lastModifiedOn` as `FormDto.UpdatedAt` and `createdOn` as
   `SubmissionDto.CreatedAt` — the API contract is independent of column names.
 
 ### 6.2 Interface
@@ -243,8 +251,8 @@ columns:
   [Route("api/spaces")]
   public class SpaceController(ICatalogService catalog) : ControllerBase
   {
-      [HttpPut("{id:int}")]
-      public async Task<ActionResult<SpaceDto>> Update(int id, [FromBody] UpdateSpaceRequest request) …
+      [HttpPut("{id:guid}")]
+      public async Task<ActionResult<SpaceDto>> Update(string id, [FromBody] UpdateSpaceRequest request) …
   }
   ```
 - **Thin actions**: bind input, call exactly one service via a constructor-injected
@@ -266,6 +274,10 @@ columns:
   `<Name>.Repository`, `<Name>.Tests`. (FMS uses the `Fms.` prefix.)
 - **Namespaces match project names** (`Fms.Api`, `Fms.Service`, …) so a class's origin
   is visible from its namespace.
+- **Database column names are camelCase** — the .NET property name with its first
+  letter lower-cased (`CreatedBy` → `createdBy`, `EntraObjectId` → `entraObjectId`).
+  No snake_case and no underscores anywhere; mapping helpers in the `DbContext`
+  centralize the translation (§6.1.1).
 - **Interfaces are prefixed `I`**; the implementation is the interface name minus the
   `I`, placed in the implementing project:
   ```csharp
@@ -300,11 +312,14 @@ Use this to audit any project (including FMS) against the standard:
       `[Route]`, verb attributes); Program.cs has no endpoint lambdas (§6.5.1).
 - [ ] Controller actions in `Api` are thin; business logic is in `Service`; queries in
       `Repository`.
-- [ ] Every table has the four audit columns (`created_by`, `created_on`,
-      `last_modified_by`, `last_modified_on`); every entity implements `IAuditable`
-      (§6.1.1).
+- [ ] Every table has a `uuid` primary-key `id` (a `string` in C#, DB default
+      `gen_random_uuid()`) plus the four camelCase audit columns (`createdBy`,
+      `createdOn`, `lastModifiedBy`, `lastModifiedOn`); every entity implements
+      `IAuditable` (§6.1.1).
+- [ ] Column names are camelCase throughout — no snake_case/underscores (§6.1.1, §7).
 - [ ] Audit columns are set by the Repository `SaveChanges` interceptor via
-      `ICurrentUserProvider` — no service or controller assigns them (§6.1.1).
+      `ICurrentUserProvider` — no service or controller assigns the id or the audit
+      columns (§6.1.1).
 - [ ] No entity is returned directly as an HTTP payload; DTOs are used (§6.5).
 - [ ] `dotnet build` clean; `dotnet test` green.
 

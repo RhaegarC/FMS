@@ -10,10 +10,10 @@ namespace Fms.Repository.Extensions;
 /// wires up the EF Core context and registers every repository by its interface.</summary>
 public static class FmsPersistenceExtensions
 {
-    /// <summary>Registers <see cref="FmsDbContext"/> (UseNpgsql + snake_case naming only
-    /// when a connection string is present — preserves no-DB startup for /health and
-    /// Swagger), the audit interceptor (§6.1.1), and the five repositories as scoped
-    /// services by interface.</summary>
+    /// <summary>Registers <see cref="FmsDbContext"/> (UseNpgsql only when a connection
+    /// string is present — preserves no-DB startup for /health and Swagger), the audit
+    /// interceptor (§6.1.1), and the five repositories as scoped services by interface.
+    /// Column names are camelCase (no underscores), mapped explicitly in the DbContext.</summary>
     public static IServiceCollection AddFmsPersistence(this IServiceCollection services, string? connectionString)
     {
         services.AddScoped<AuditSaveChangesInterceptor>();
@@ -23,7 +23,6 @@ public static class FmsPersistenceExtensions
             if (!string.IsNullOrEmpty(connectionString))
             {
                 options.UseNpgsql(connectionString)
-                    .UseSnakeCaseNamingConvention()
                     .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
             }
         });

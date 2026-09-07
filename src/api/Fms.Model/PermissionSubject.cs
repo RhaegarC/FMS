@@ -5,4 +5,4 @@ namespace Fms.Model.Entities;
 /// This is the security boundary: expressions can only read these three fields,
 /// enforced at parse time so a permissions row can never probe other data.
 /// </summary>
-public readonly record struct PermissionSubject(int Id, string Email, string Role);
+public readonly record struct PermissionSubject(string Id, string Email, string Role);

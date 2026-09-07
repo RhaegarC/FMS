@@ -109,18 +109,18 @@ public class AuthIntegrationTests : IAsyncLifetime
     private async Task<long> UserCountAsync(string oid)
     {
         var rows = await QueryAsync(
-            $"SELECT COUNT(*) FROM users WHERE entra_object_id = '{oid}'");
+            $"SELECT COUNT(*) FROM users WHERE \"entraObjectId\" = '{oid}'");
         return (long)rows.Rows[0][0]!;
     }
 
     private async Task<string> UserRoleAsync(string oid)
     {
         var rows = await QueryAsync(
-            $"SELECT role FROM users WHERE entra_object_id = '{oid}'");
+            $"SELECT role FROM users WHERE \"entraObjectId\" = '{oid}'");
         return rows.Rows[0][0]!.ToString()!;
     }
 
-    private sealed record MeDto(int Id, string Name, string Email, string Role);
+    private sealed record MeDto(string Id, string Name, string Email, string Role);
 
     [Fact]
     public async Task Anonymous_GetApiMe_ReturnsUnauthorized()

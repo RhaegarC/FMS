@@ -24,31 +24,30 @@ namespace Fms.Repository.Migrations
 
             modelBuilder.Entity("Fms.Model.Entities.Form", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnName("createdBy");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("created_on")
+                        .HasColumnName("createdOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("text")
-                        .HasColumnName("last_modified_by");
+                        .HasColumnName("lastModifiedBy");
 
                     b.Property<DateTimeOffset>("LastModifiedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("last_modified_on")
+                        .HasColumnName("lastModifiedOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Name")
@@ -62,36 +61,33 @@ namespace Fms.Repository.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("schema");
 
-                    b.Property<int>("SpaceId")
-                        .HasColumnType("integer")
-                        .HasColumnName("space_id");
+                    b.Property<Guid>("SpaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("spaceId");
 
-                    b.HasKey("Id")
-                        .HasName("pk_forms");
+                    b.HasKey("Id");
 
-                    b.HasIndex("SpaceId")
-                        .HasDatabaseName("ix_forms_space_id");
+                    b.HasIndex("SpaceId");
 
                     b.ToTable("forms", (string)null);
                 });
 
             modelBuilder.Entity("Fms.Model.Entities.Permission", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnName("createdBy");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("created_on")
+                        .HasColumnName("createdOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Expression")
@@ -101,59 +97,57 @@ namespace Fms.Repository.Migrations
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("text")
-                        .HasColumnName("last_modified_by");
+                        .HasColumnName("lastModifiedBy");
 
                     b.Property<DateTimeOffset>("LastModifiedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("last_modified_on")
+                        .HasColumnName("lastModifiedOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("ResourceId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
-                        .HasColumnName("resource_id");
+                        .HasColumnName("resourceId");
 
                     b.Property<string>("ResourceType")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
-                        .HasColumnName("resource_type");
+                        .HasColumnName("resourceType");
 
-                    b.HasKey("Id")
-                        .HasName("pk_permissions");
+                    b.HasKey("Id");
 
                     b.ToTable("permissions", (string)null);
                 });
 
             modelBuilder.Entity("Fms.Model.Entities.Space", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnName("createdBy");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("created_on")
+                        .HasColumnName("createdOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("text")
-                        .HasColumnName("last_modified_by");
+                        .HasColumnName("lastModifiedBy");
 
                     b.Property<DateTimeOffset>("LastModifiedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("last_modified_on")
+                        .HasColumnName("lastModifiedOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Name")
@@ -162,29 +156,27 @@ namespace Fms.Repository.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
-                    b.HasKey("Id")
-                        .HasName("pk_spaces");
+                    b.HasKey("Id");
 
                     b.ToTable("spaces", (string)null);
                 });
 
             modelBuilder.Entity("Fms.Model.Entities.Submission", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnName("createdBy");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("created_on")
+                        .HasColumnName("createdOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Data")
@@ -192,53 +184,49 @@ namespace Fms.Repository.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("data");
 
-                    b.Property<int>("FormId")
-                        .HasColumnType("integer")
-                        .HasColumnName("form_id");
+                    b.Property<Guid>("FormId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("formId");
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("text")
-                        .HasColumnName("last_modified_by");
+                        .HasColumnName("lastModifiedBy");
 
                     b.Property<DateTimeOffset>("LastModifiedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("last_modified_on")
+                        .HasColumnName("lastModifiedOn")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer")
-                        .HasColumnName("user_id");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("userId");
 
-                    b.HasKey("Id")
-                        .HasName("pk_submissions");
+                    b.HasKey("Id");
 
-                    b.HasIndex("FormId")
-                        .HasDatabaseName("ix_submissions_form_id");
+                    b.HasIndex("FormId");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_submissions_user_id");
+                    b.HasIndex("UserId");
 
                     b.ToTable("submissions", (string)null);
                 });
 
             modelBuilder.Entity("Fms.Model.Entities.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("text")
-                        .HasColumnName("created_by");
+                        .HasColumnName("createdBy");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("created_on")
+                        .HasColumnName("createdOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Email")
@@ -251,16 +239,16 @@ namespace Fms.Repository.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
-                        .HasColumnName("entra_object_id");
+                        .HasColumnName("entraObjectId");
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("text")
-                        .HasColumnName("last_modified_by");
+                        .HasColumnName("lastModifiedBy");
 
                     b.Property<DateTimeOffset>("LastModifiedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamptz")
-                        .HasColumnName("last_modified_on")
+                        .HasColumnName("lastModifiedOn")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Name")
@@ -277,12 +265,10 @@ namespace Fms.Repository.Migrations
                         .HasDefaultValue("user")
                         .HasColumnName("role");
 
-                    b.HasKey("Id")
-                        .HasName("pk_users");
+                    b.HasKey("Id");
 
                     b.HasIndex("EntraObjectId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_users_entra_object_id");
+                        .IsUnique();
 
                     b.ToTable("users", (string)null);
                 });
@@ -293,8 +279,7 @@ namespace Fms.Repository.Migrations
                         .WithMany("Forms")
                         .HasForeignKey("SpaceId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_forms_spaces_space_id");
+                        .IsRequired();
 
                     b.Navigation("Space");
                 });
@@ -305,15 +290,13 @@ namespace Fms.Repository.Migrations
                         .WithMany("Submissions")
                         .HasForeignKey("FormId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_submissions_forms_form_id");
+                        .IsRequired();
 
                     b.HasOne("Fms.Model.Entities.User", "User")
                         .WithMany("Submissions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_submissions_users_user_id");
+                        .IsRequired();
 
                     b.Navigation("Form");
 

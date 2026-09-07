@@ -109,15 +109,15 @@ public class SpaceFormCrudTests : IAsyncLifetime
     /// <summary>Inserts a grant expression directly — feature 05 has no web UI for
     /// permissions, and admin edits them via SQL in production too. Parameterized
     /// because expressions contain quoted literals (e.g. <c>user.email = '…'</c>).</summary>
-    private async Task GrantAsync(string resourceType, int resourceId, string expression)
+    private async Task GrantAsync(string resourceType, string resourceId, string expression)
     {
         await using var conn = new NpgsqlConnection(_pg.GetConnectionString());
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
-            "INSERT INTO permissions (resource_type, resource_id, expression) VALUES (@type, @id, @expr)",
+            "INSERT INTO permissions (\"resourceType\", \"resourceId\", expression) VALUES (@type, @id, @expr)",
             conn);
         cmd.Parameters.AddWithValue("type", resourceType);
-        cmd.Parameters.AddWithValue("id", resourceId.ToString());
+        cmd.Parameters.AddWithValue("id", resourceId);
         cmd.Parameters.AddWithValue("expr", expression);
         await cmd.ExecuteNonQueryAsync();
     }
@@ -138,15 +138,15 @@ public class SpaceFormCrudTests : IAsyncLifetime
     }
 
     private async Task<FormDto> CreateFormAsync(
-        HttpClient client, int spaceId, string name, string schema = """{"type":"object"}""")
+        HttpClient client, string spaceId, string name, string schema = """{"type":"object"}""")
     {
         var response = await client.PostAsJsonAsync($"/api/spaces/{spaceId}/forms", new { name, schema });
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<FormDto>())!;
     }
 
-    private sealed record SpaceDto(int Id, string Name);
-    private sealed record FormDto(int Id, int SpaceId, string Name, string Schema, DateTimeOffset UpdatedAt);
+    private sealed record SpaceDto(string Id, string Name);
+    private sealed record FormDto(string Id, string SpaceId, string Name, string Schema, DateTimeOffset UpdatedAt);
 
     // --- Spaces: admin-only CRUD -----------------------------------------
 
@@ -174,10 +174,10 @@ public class SpaceFormCrudTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var space = (await response.Content.ReadFromJsonAsync<SpaceDto>())!;
-        Assert.True(space.Id > 0);
+        Assert.True(Guid.TryParse(space.Id, out _));
         Assert.Equal("Finance", space.Name);
 
-        var rows = await QueryAsync($"SELECT COUNT(*) FROM spaces WHERE id = {space.Id}");
+        var rows = await QueryAsync($"SELECT COUNT(*) FROM spaces WHERE id = '{space.Id}'");
         Assert.Equal(1L, (long)rows.Rows[0][0]!);
     }
 
@@ -213,7 +213,7 @@ public class SpaceFormCrudTests : IAsyncLifetime
         var updated = (await response.Content.ReadFromJsonAsync<SpaceDto>())!;
         Assert.Equal("New Name", updated.Name);
 
-        var row = await QueryAsync($"SELECT name FROM spaces WHERE id = {space.Id}");
+        var row = await QueryAsync($"SELECT name FROM spaces WHERE id = '{space.Id}'");
         Assert.Equal("New Name", row.Rows[0][0]!.ToString());
     }
 
@@ -221,7 +221,10 @@ public class SpaceFormCrudTests : IAsyncLifetime
     public async Task Admin_UpdateMissingSpace_ReturnsNotFound()
     {
         using var admin = AdminClient();
-        var response = await admin.PutAsJsonAsync("/api/spaces/999999", new { name = "X" });
+        // A well-formed uuid with no matching row must 404 (the {id:guid} route rejects
+        // non-uuid paths outright, so 999999 would never reach the handler).
+        var response = await admin.PutAsJsonAsync(
+            "/api/spaces/00000000-0000-0000-0000-000000000000", new { name = "X" });
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -234,7 +237,7 @@ public class SpaceFormCrudTests : IAsyncLifetime
         var response = await admin.DeleteAsync($"/api/spaces/{space.Id}");
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        var rows = await QueryAsync($"SELECT COUNT(*) FROM spaces WHERE id = {space.Id}");
+        var rows = await QueryAsync($"SELECT COUNT(*) FROM spaces WHERE id = '{space.Id}'");
         Assert.Equal(0L, (long)rows.Rows[0][0]!);
     }
 
@@ -245,7 +248,7 @@ public class SpaceFormCrudTests : IAsyncLifetime
         var space = await CreateSpaceAsync(admin, "Finance");
 
         var rows = await QueryAsync(
-            $"SELECT created_by, created_on, last_modified_on FROM spaces WHERE id = {space.Id}");
+            $"SELECT \"createdBy\", \"createdOn\", \"lastModifiedOn\" FROM spaces WHERE id = '{space.Id}'");
         Assert.Single(rows.Rows);
 
         // The actor is the caller's Entra object id (AAD GUID) — the admin token's oid —
@@ -268,7 +271,7 @@ public class SpaceFormCrudTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var form = (await response.Content.ReadFromJsonAsync<FormDto>())!;
-        Assert.True(form.Id > 0);
+        Assert.True(Guid.TryParse(form.Id, out _));
         Assert.Equal(space.Id, form.SpaceId);
         Assert.Equal("Expense Report", form.Name);
     }
@@ -345,7 +348,7 @@ public class SpaceFormCrudTests : IAsyncLifetime
         var response = await admin.DeleteAsync($"/api/forms/{form.Id}");
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        var rows = await QueryAsync($"SELECT COUNT(*) FROM forms WHERE id = {form.Id}");
+        var rows = await QueryAsync($"SELECT COUNT(*) FROM forms WHERE id = '{form.Id}'");
         Assert.Equal(0L, (long)rows.Rows[0][0]!);
     }
 

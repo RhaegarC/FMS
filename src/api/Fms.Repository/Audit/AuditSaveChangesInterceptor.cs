@@ -7,10 +7,10 @@ namespace Fms.Repository.Audit;
 
 /// <summary>
 /// Single source of truth for the audit columns (backend-standard §6.1.1): stamps
-/// <c>created_*</c> on insert and <c>last_modified_*</c> on insert/update for every
-/// <see cref="IAuditable"/> entity. The actor comes from <see cref="ICurrentUserProvider"/>
-/// (implemented in the Api layer) so the Repository never touches HTTP. Handlers never
-/// set audit columns themselves.
+/// <c>createdBy</c>/<c>createdOn</c> on insert and <c>lastModifiedBy</c>/<c>lastModifiedOn</c>
+/// on insert/update for every <see cref="IAuditable"/> entity. The actor comes from
+/// <see cref="ICurrentUserProvider"/> (implemented in the Api layer) so the Repository never
+/// touches HTTP. Handlers never set audit columns themselves.
 /// </summary>
 public sealed class AuditSaveChangesInterceptor(ICurrentUserProvider currentUser) : SaveChangesInterceptor
 {

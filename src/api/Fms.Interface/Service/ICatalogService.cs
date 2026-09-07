@@ -10,15 +10,15 @@ public interface ICatalogService
 
     Task<Space> CreateSpaceAsync(string name, CancellationToken cancellationToken = default);
 
-    Task<Space> UpdateSpaceAsync(int id, string name, CancellationToken cancellationToken = default);
+    Task<Space> UpdateSpaceAsync(string id, string name, CancellationToken cancellationToken = default);
 
-    Task DeleteSpaceAsync(int id, CancellationToken cancellationToken = default);
+    Task DeleteSpaceAsync(string id, CancellationToken cancellationToken = default);
 
-    Task<List<Form>> ListFormsInSpaceAsync(int spaceId, User user, CancellationToken cancellationToken = default);
+    Task<List<Form>> ListFormsInSpaceAsync(string spaceId, User user, CancellationToken cancellationToken = default);
 
-    Task<Form> CreateFormAsync(int spaceId, string name, string schema, CancellationToken cancellationToken = default);
+    Task<Form> CreateFormAsync(string spaceId, string name, string schema, CancellationToken cancellationToken = default);
 
-    Task<Form> UpdateFormAsync(int id, string name, string schema, CancellationToken cancellationToken = default);
+    Task<Form> UpdateFormAsync(string id, string name, string schema, CancellationToken cancellationToken = default);
 
-    Task DeleteFormAsync(int id, CancellationToken cancellationToken = default);
+    Task DeleteFormAsync(string id, CancellationToken cancellationToken = default);
 }

@@ -5,25 +5,12 @@ name: fms
 # without a .env. To customize:
 #   cp config/.env.example config/.env
 #   docker compose --env-file config/.env up --build
+#
+# Postgres is NOT part of this compose: the dev DB runs as its own standalone
+# container (e.g. `my-postgres-db`) publishing POSTGRES_PORT. The backend reaches
+# it through POSTGRES_HOST (default host.docker.internal on Docker Desktop).
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: fms-postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-fms}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fms}
-      POSTGRES_DB: ${POSTGRES_DB:-fms}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fms} -d ${POSTGRES_DB:-fms}"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   backend:
     build:
       context: .
@@ -32,36 +19,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-fms};Username=${POSTGRES_USER:-fms};Password=${POSTGRES_PASSWORD:-fms}"
+      ConnectionStrings__Postgres: "Host=${POSTGRES_HOST:-host.docker.internal};Port=${POSTGRES_PORT:-5432};Database=${POSTGRES_DB:-fms};Username=${POSTGRES_USER:-fms};Password=${POSTGRES_PASSWORD:-fms}"
       Entra__TenantId: ${ENTRA_TENANT_ID:-}
       Entra__ClientId: ${ENTRA_CLIENT_ID:-}
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
-      CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:4173,http://localhost:4174}
+      CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:8443}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  admin-app:
-    build:
-      context: src/web
-      dockerfile: apps/admin/Dockerfile
-    container_name: fms-admin-app
-    ports:
-      - "${ADMIN_PORT:-4173}:80"
-    depends_on:
-      - backend
-
-  user-app:
-    build:
-      context: src/web
-      dockerfile: apps/user/Dockerfile
-    container_name: fms-user-app
-    ports:
-      - "${USER_PORT:-4174}:80"
-    depends_on:
-      - backend
-
-volumes:
-  postgres-data:
