@@ -1,7 +1,7 @@
 # 01 — Foundation
 
-Status: **Not started** · [00-mission-1-sprint.md](00-mission-1-sprint.md)
-Source: [PRD](../PRD.md) — System overview + Deployment (stage 1) + Decisions #7/#8/#9/#22.
+Status: **Implemented and merged** via PR #131 (2026-09-07) · [00-mission-1-sprint.md](../00-mission-1-sprint.md)
+Source: [PRD](../../PRD.md) — System overview + Deployment (stage 1) + Decisions #7/#8/#9/#22.
 
 ## Summary
 
@@ -26,7 +26,7 @@ database, so that each feature lands against a working environment and is verifi
 - [ ] Backend applies EF migrations at startup against the configured standalone Postgres
 - [ ] Swagger/OpenAPI is reachable (served at root — bug 01) and CORS is configured from `.env`
 - [ ] `.env` keys documented: connection string, Entra tenant/clientId, `ADMIN_USER_IDS`, data-source URL policy, CORS (the `VITE_*` SPA keys apply once the web app is wired, at frontend integration)
-- [ ] Data model follows [docs/backend-standard.md §6.1.1](../backend-standard.md): camelCase column names (no underscores); every data table has a `uuid` `id` primary key (a `string` in .NET/JSON, `gen_random_uuid()` DB default) plus the four audit columns `createdBy`, `createdOn`, `lastModifiedBy`, `lastModifiedOn`
+- [ ] Data model follows [docs/backend-standard.md §6.1.1](../../backend-standard.md): camelCase column names (no underscores); every data table has a `uuid` `id` primary key (a `string` in .NET/JSON, `gen_random_uuid()` DB default) plus the four audit columns `createdBy`, `createdOn`, `lastModifiedBy`, `lastModifiedOn`
 
 ## Tests (TDD)
 

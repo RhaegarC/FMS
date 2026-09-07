@@ -31,7 +31,7 @@ Number = priority (lowest first = next to implement); file = `docs/features/NN-n
 
 | # | Feature (file) | Depends on | Summary — the backend/API slice | Status |
 |---|---|---|---|---|
-| 01 | foundation | — | Verify the layered solution + `*.Test` projects build green; `docker-compose` (postgres, backend, web-app); EF migrations at startup; OpenAPI/Swagger + CORS + `.env` config | not started |
+| 01 | foundation | — | Verify the layered solution + `*.Test` projects build green; `docker-compose` (backend; Postgres standalone outside compose; `web-app` at frontend integration); EF migrations at startup; OpenAPI/Swagger + CORS + `.env` config | archived (PR #131) |
 | 02 | entra-auth | 01 | Backend validates Entra ID bearer tokens; users auto-provisioned on first login; admins seeded from `ADMIN_USER_IDS`; `role` stored on `users` | not started |
 | 03 | permission-eval | 02 | `permissions` table + request-time expression evaluation over `user.id`/`email`/`role`; union of space + form grants; **default deny**; enforced on every data read | not started |
 | 04 | forms-crud | 02 | Admin CRUD for form definitions (space-scoped): `schema` jsonb, draft 2020-12 (incl. `if`/`then`/`else`), mutable single definition; schema validated on save | not started |
