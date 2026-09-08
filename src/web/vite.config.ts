@@ -34,6 +34,16 @@ export default defineConfig(({ mode }) => {
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
       watch: { ignored: ['**/.figma/**'] },
+      proxy: {
+        // Dev only: forward `/api/...` calls to the ASP.NET Core backend so the
+        // SPA can use same-origin paths (no CORS involved). The deployed build is
+        // served behind a reverse proxy that does the same. Override the target
+        // with the VITE_API_PROXY_TARGET shell env when the backend isn't on 5149.
+        '/api': {
+          target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:5149',
+          changeOrigin: true,
+        },
+      },
     },
     preview: {
       host: '0.0.0.0',
