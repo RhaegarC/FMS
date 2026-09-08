@@ -1,7 +1,7 @@
 # 02 — Entra Auth
 
-Status: **Implemented** on `feature/02-entra-auth` (2026-08-13, awaiting review/merge) · [00-mission-1-sprint.md](00-mission-1-sprint.md)
-Source: [PRD](../PRD.md) — Decisions #5/#6 + Authentication & authorization (backend side) + Deployment env.
+Status: **Implemented and merged** via PR #1 (2026-09-08) · [00-mission-1-sprint.md](../00-mission-1-sprint.md)
+Source: [PRD](../../PRD.md) — Decisions #5/#6 + Authentication & authorization (backend side) + Deployment env.
 
 ## Summary
 
@@ -17,7 +17,7 @@ on every call, so I never maintain a separate credential and my role is always c
 
 ## Dependencies
 
-- [01-foundation](archive/01-foundation.md) (env + running host)
+- [01-foundation](01-foundation.md) (env + running host)
 
 ## Acceptance criteria
 
@@ -50,7 +50,7 @@ model) and closes the AC-1 test gap.
 - Added in this PR: AC-1 rejection tests (`AuthIntegrationTests`) — malformed, expired,
   wrong-audience, and wrong-issuer tokens each return 401.
 
-Test results (from `src/api/`): `dotnet test` green — Service 70, Repository 3, Api 56.
+Test results (from `src/api/`): `dotnet test` green — Service 70, Repository 3, Api 60.
 
 ## Notes / non-goals
 
