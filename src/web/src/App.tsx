@@ -1,12 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useMsal } from "@azure/msal-react";
+import { apiRequest, authConfigured } from "@/auth/authConfig";
+import { fetchMe } from "@/auth/me";
 import {
   spaces as allSpaces,
   forms as allForms,
   submissions,
   userSubmissions,
   userAccessibleForms,
-  adminUser,
-  normalUser,
 } from "@/data/mockData";
 import type { Form, AppUser, Submission } from "@/data/mockData";
 import AdminPortal from "@/components/AdminPortal";
@@ -80,54 +81,55 @@ function LogoMark() {
   );
 }
 
-// ─── Login Modal ─────────────────────────────────────────────────────────────
+// ─── Session helpers (real Entra sign-in) ────────────────────────────────────
 
-function LoginModal({ onLogin, onClose }: { onLogin: (auth: AuthState) => void; onClose: () => void }) {
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
-
+function initialsOf(name: string): string {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-lg shadow-2xl w-full max-w-xs mx-4 overflow-hidden">
-        <div className="px-6 pt-6 pb-2">
-          <div className="flex items-center gap-2.5 mb-1">
-            <LogoMark />
-            <span className="text-sm font-bold tracking-tight text-foreground">FormCraft</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-3 mb-5">Sign in to access your forms and submissions.</p>
-          <div className="flex flex-col gap-2.5 mb-5">
-            <button
-              className="flex items-center gap-3 px-4 py-3 bg-secondary border border-border rounded-lg hover:border-primary/40 hover:bg-secondary/80 transition-all text-left"
-              onClick={() => onLogin("admin")}
-            >
-              <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
-                JP
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-foreground">Jordan Park</div>
-                <div className="text-[10px] text-muted-foreground">Administrator · jordan.park@company.com</div>
-              </div>
-            </button>
-            <button
-              className="flex items-center gap-3 px-4 py-3 bg-secondary border border-border rounded-lg hover:border-accent/40 hover:bg-secondary/80 transition-all text-left"
-              onClick={() => onLogin("user")}
-            >
-              <div className="w-8 h-8 rounded-full bg-accent/15 border border-accent/30 text-accent text-xs font-bold flex items-center justify-center flex-shrink-0">
-                AO
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-foreground">Alex Okafor</div>
-                <div className="text-[10px] text-muted-foreground">User · alex.okafor@company.com</div>
-              </div>
-            </button>
-          </div>
-        </div>
-        <div className="px-6 py-3 border-t border-border bg-background/40">
-          <p className="text-[10px] text-muted-foreground text-center">Demo: select an account to continue</p>
+    name
+      .trim()
+      .split(/\s+/)
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
+}
+
+function SessionChecking() {
+  return (
+    <div className="h-full flex items-center justify-center bg-background text-foreground p-6">
+      <p className="text-xs text-muted-foreground animate-pulse">Checking your session…</p>
+    </div>
+  );
+}
+
+function SessionError({
+  message,
+  onRetry,
+  onSignOut,
+}: {
+  message: string;
+  onRetry: () => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <div className="h-full flex items-center justify-center bg-background text-foreground p-6">
+      <div className="max-w-sm bg-card border border-border rounded-lg p-6 mx-4">
+        <h1 className="text-sm font-semibold mb-2">Couldn't verify your sign-in</h1>
+        <p className="text-xs text-muted-foreground leading-relaxed mb-4">{message}</p>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded hover:bg-primary/90 active:scale-[0.98] transition-all"
+            onClick={onRetry}
+          >
+            Try again
+          </button>
+          <button
+            className="px-3 py-1.5 bg-secondary border border-border text-xs font-semibold rounded hover:bg-secondary/80 active:scale-[0.98] transition-all"
+            onClick={onSignOut}
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </div>
@@ -544,7 +546,7 @@ function AboutView() {
 
         <div className="border-t border-border/60 pt-5">
           <p className="text-[10px] text-muted-foreground">
-            Built with React 19, Vite 8, Tailwind CSS v4, and JSON Schema Draft-07. Auth is simulated for demo purposes.
+            Built with React 19, Vite 8, Tailwind CSS v4, and JSON Schema Draft-07. Sign in with your Microsoft Entra work account.
           </p>
         </div>
       </div>
@@ -555,25 +557,66 @@ function AboutView() {
 // ─── App Shell ────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [auth, setAuth] = useState<AuthState>("none");
+  const { instance, accounts } = useMsal();
+  const account = accounts[0] ?? null;
+
   const [nav, setNav] = useState<NavItem>("home");
-  const [showLogin, setShowLogin] = useState(false);
   const [fillForm, setFillForm] = useState<Form | null>(null);
+  const [profile, setProfile] = useState<AppUser | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileAttempt, setProfileAttempt] = useState(0);
 
-  const user: AppUser | null =
-    auth === "admin" ? adminUser : auth === "user" ? normalUser : null;
+  // Real identity + role come from the backend (`/api/me`), which provisions the
+  // user on first login and reports whether they're an admin. We show a checking
+  // screen until it resolves rather than guessing a role from the token.
+  useEffect(() => {
+    if (!account) {
+      setProfile(null);
+      setProfileError(null);
+      return;
+    }
+    let cancelled = false;
+    setProfileError(null);
+    fetchMe(instance, account)
+      .then((me) => {
+        if (cancelled) return;
+        setProfile({
+          id: me.id,
+          name: me.name,
+          email: me.email,
+          role: me.role,
+          initials: initialsOf(me.name),
+        });
+      })
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setProfile(null);
+        setProfileError(err.message || "Could not verify your session with the API.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [instance, account?.localAccountId, profileAttempt]);
 
-  const handleLogin = (a: AuthState) => {
-    setAuth(a);
-    setShowLogin(false);
-    setNav("home");
+  const auth: AuthState = profile ? profile.role : "none";
+  const user: AppUser | null = profile;
+
+  const signIn = () => {
+    if (!authConfigured) {
+      setProfileError(
+        "Entra ID is not configured — set VITE_ENTRA_CLIENT_ID and VITE_ENTRA_TENANT_ID in src/web/.env.",
+      );
+      return;
+    }
+    void instance.loginRedirect(apiRequest);
   };
 
-  const handleLogout = () => {
-    setAuth("none");
-    setNav("home");
-    setFillForm(null);
+  const signOut = () => {
+    void instance.logoutRedirect({ postLogoutRedirectUri: window.location.origin });
+    setProfile(null);
   };
+
+  const retryProfile = () => setProfileAttempt((n) => n + 1);
 
   const handleOpenForm = (form: Form) => {
     setFillForm(form);
@@ -596,6 +639,16 @@ export default function App() {
 
   // Ensure we don't stay on a hidden nav item after logout/role change
   const effectiveNav = visibleNavItems.some((n) => n.id === nav) ? nav : "home";
+
+  // Signed into Entra but the role isn't resolved yet (or resolution failed) —
+  // hold the app on a focused screen instead of flashing a guessed role.
+  if (account && !profile) {
+    return profileError ? (
+      <SessionError message={profileError} onRetry={retryProfile} onSignOut={signOut} />
+    ) : (
+      <SessionChecking />
+    );
+  }
 
   return (
     <div className="flex h-full bg-background text-foreground font-sans overflow-hidden">
@@ -647,7 +700,7 @@ export default function App() {
           {auth === "none" ? (
             <button
               className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded hover:bg-primary/90 active:scale-[0.98] transition-all"
-              onClick={() => setShowLogin(true)}
+              onClick={signIn}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
@@ -672,7 +725,7 @@ export default function App() {
               <button
                 className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors flex-shrink-0"
                 title="Sign out"
-                onClick={handleLogout}
+                onClick={signOut}
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -690,7 +743,7 @@ export default function App() {
             auth={auth}
             user={user}
             onOpenForm={handleOpenForm}
-            onLogin={() => setShowLogin(true)}
+            onLogin={signIn}
           />
         )}
 
@@ -713,10 +766,6 @@ export default function App() {
         {effectiveNav === "about" && <AboutView />}
       </div>
 
-      {/* ── Login modal ── */}
-      {showLogin && (
-        <LoginModal onLogin={handleLogin} onClose={() => setShowLogin(false)} />
-      )}
     </div>
   );
 }
