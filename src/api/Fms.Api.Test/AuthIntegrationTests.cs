@@ -67,21 +67,28 @@ public class AuthIntegrationTests : IAsyncLifetime
         _rsa.Dispose();
     }
 
-    /// <summary>Serializes a self-issued RS256 JWT for the given principal claims.</summary>
-    private string CreateToken(string oid, string email, string name, RSA? signingKey = null)
+    /// <summary>Serializes a self-issued RS256 JWT for the given principal claims. The
+    /// issuer/audience/expiry defaults match the validated configuration; pass an
+    /// override to mint a token the API must reject (feature 02 AC 1).</summary>
+    private string CreateToken(
+        string oid, string email, string name,
+        RSA? signingKey = null,
+        string? issuer = null,
+        string? audience = null,
+        DateTimeOffset? expires = null)
     {
         var handler = new JsonWebTokenHandler();
         var descriptor = new SecurityTokenDescriptor
         {
-            Issuer = Issuer,
-            Audience = Audience,
+            Issuer = issuer ?? Issuer,
+            Audience = audience ?? Audience,
             Claims = new Dictionary<string, object>
             {
                 ["oid"] = oid,
                 ["email"] = email,
                 ["name"] = name,
             },
-            Expires = DateTime.UtcNow.AddMinutes(30),
+            Expires = (expires ?? DateTimeOffset.UtcNow.AddMinutes(30)).UtcDateTime,
             SigningCredentials = new SigningCredentials(
                 new RsaSecurityKey(signingKey ?? _rsa), SecurityAlgorithms.RsaSha256),
         };
@@ -173,6 +180,54 @@ public class AuthIntegrationTests : IAsyncLifetime
         var token = CreateToken("user-oid-456", "mallory@example.com", "Mallory", rogue);
 
         using var client = ClientWithToken(token);
+        var response = await client.GetAsync("/api/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MalformedToken_ReturnsUnauthorized()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", "not-a-jwt");
+
+        var response = await client.GetAsync("/api/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExpiredToken_ReturnsUnauthorized()
+    {
+        using var client = ClientWithToken(CreateToken(
+            "user-oid-456", "alice@example.com", "Alice",
+            expires: DateTimeOffset.UtcNow.AddMinutes(-30)));
+
+        var response = await client.GetAsync("/api/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task TokenWithWrongAudience_ReturnsUnauthorized()
+    {
+        using var client = ClientWithToken(CreateToken(
+            "user-oid-456", "alice@example.com", "Alice",
+            audience: "some-other-audience"));
+
+        var response = await client.GetAsync("/api/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task TokenWithWrongIssuer_ReturnsUnauthorized()
+    {
+        using var client = ClientWithToken(CreateToken(
+            "user-oid-456", "alice@example.com", "Alice",
+            issuer: "https://evil.example"));
+
         var response = await client.GetAsync("/api/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
