@@ -12,8 +12,8 @@ eight stages. That is not what is happening, and the difference is not cosmetic:
 gets built, what gets tested, and what a reviewer should expect to see.
 
 What changed: a proper solution template is installed — the NuGet package **`Rg.Backend.Api`**
-(`dotnet new BackendSolution`), source repo `/Users/rhaegar/Dev/github/BackendTemplate`, shipping
-its rules as `src/content/STANDARD.md`. FMS's `src/api` was built against `docs/backend-standard.md`,
+(`dotnet new BackendSolution`), whose source repo is a separate clone (not part of this repository),
+shipping its rules as `src/content/STANDARD.md`. FMS's `src/api` was built against `docs/backend-standard.md`,
 an org-wide standard it is described as *reference-implementing*. The two disagree on real
 behaviour, not just style — keys, delete semantics, audit, error contract, config keys, test-project
 split — so the codebase documents one standard and implements another. Removing that divergence is
@@ -109,6 +109,26 @@ which writes year 1 rather than failing (item 9). Keeping the list current is wh
 | 11 | `users.id` **is** the Entra object id — no `entraObjectId` column. Entra object ids are GUIDs, so the key still satisfies the `uuid` contract; the token's `sub` claim is not accepted as a fallback because it is pairwise and has no such guarantee | **applied** |
 | 12 | Model shape is pinned without a database — `ModelShapeTests` reads the EF metadata, because every decision above fails *silently* | **applied** |
 | 13 | **`AsNoTracking` on the shared read — open.** The ported `ListAllAsync` read untracked; `IDbRepository.GetListAsync` tracks. Permission rows are read on every authorised request, evaluated and discarded. The fix belongs in the shared read, not a permission-specific override | **open** |
+
+## Picking this up on another machine
+
+Everything needed to continue is in this repository on `develop`. Three prerequisites are not,
+because none of them belongs in version control:
+
+1. **Bootstrap the GitNexus index.** `.gitnexus/` is gitignored, so a fresh clone has neither the
+   index nor `run.cjs`, and the per-commit `impact` / `detect-changes` discipline below cannot run
+   without it. Bootstrap once with `npx`, `bunx` or `pnpm dlx` — e.g. `bunx gitnexus@latest analyze`
+   (npm 11's `npx` crashes). Cheap to redo: a full index of this repo takes about five seconds.
+2. **Docker, for the database-backed tests.** Not a local Postgres: the tests bring their own up via
+   `Testcontainers.PostgreSql`. That package is already referenced by `src/api` and needs adding to
+   `src/api-new`, which is part of the infrastructure slice.
+3. **No template checkout is required.** The port does not regenerate anything — `src/api-new` is
+   generated and committed, and later migrations are produced by `dotnet ef` inside this repo. The
+   template repository is only ever a *reference* for how a mechanism was written, never a build
+   input, so a machine without it can do all of the remaining work.
+
+`dotnet ef` (10.0.11) and `Microsoft.EntityFrameworkCore.Design` are already installed/ referenced,
+so the migration slice needs no setup.
 
 ## Slices
 
