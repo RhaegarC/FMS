@@ -1,7 +1,7 @@
 namespace Fms.Model.DatabaseEntity;
 
 /// <summary>
-/// A platform user, authenticated via Entra ID (feature 03). No credentials stored.
+/// A platform user, authenticated via Entra ID (feature 02). No credentials stored.
 /// </summary>
 /// <remarks>
 /// <see cref="EntityBase.Id"/> <em>is</em> the Entra object id — the same value as the
