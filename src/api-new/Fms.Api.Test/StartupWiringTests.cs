@@ -7,7 +7,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Fms.Api;
+using Fms.Interface.Infrastructure;
+using Fms.Interface.Repository;
+using Fms.Interface.Service;
 using Fms.Model;
+using Fms.Repository;
 
 /// <summary>
 /// The composition root is startup behaviour with no endpoint to call, so these tests
@@ -140,5 +144,39 @@ public class StartupWiringTests
         Assert.Equal(
             "https://login.microsoftonline.com/tenant-1/v2.0",
             options.Get(JwtBearerDefaults.AuthenticationScheme).Authority);
+    }
+
+    // ---- Permissions (feature 03) ----------------------------------------------
+
+    /// <summary>
+    /// The evaluator is held as a singleton because it has no state to keep per request.
+    /// Nothing else would notice if it were registered scoped — the requests would still
+    /// be authorised — so the lifetime is asserted rather than assumed. The repository is
+    /// checked alongside it because a missing registration only surfaces as a 500 on the
+    /// first request that needs one.
+    ///
+    /// The connection string points at a dead port: registrations are being checked, not
+    /// connectivity, and building a context does not open a connection.
+    ///
+    /// <c>IUserContextService</c> is registered here as well, because it is: the
+    /// composition root is <c>Program</c> plus <c>ServiceExt</c>, and the interceptor that
+    /// <c>RegistService</c> wires up depends on it. Registering only what
+    /// <c>ServiceExt</c> does would fail on the DbContext rather than on the thing under
+    /// test.
+    /// </summary>
+    [Fact]
+    public async Task The_permission_evaluator_is_a_singleton_and_the_repository_is_registered()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddScoped<IUserContextService, UserContextService>();
+        services.RegistService("Host=127.0.0.1;Port=1;Database=fms;Username=fms;Password=fms");
+
+        await using var provider = services.BuildServiceProvider();
+
+        Assert.Same(
+            provider.GetRequiredService<IPermissionEvaluator>(),
+            provider.GetRequiredService<IPermissionEvaluator>());
+        Assert.IsType<PermissionRepository>(provider.GetRequiredService<IPermissionRepository>());
     }
 }

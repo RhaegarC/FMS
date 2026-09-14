@@ -24,6 +24,11 @@ internal static class ServiceExt
         // Register service
         services.AddScoped<IUserService, UserService>();
 
+        // The evaluator holds no state — it is a pure function of the permissions it is
+        // handed — so it is a singleton rather than a per-request allocation. It runs on
+        // every authorised request, and there is nothing per-request to hold.
+        services.AddSingleton<IPermissionEvaluator, PermissionEvaluator>();
+
         // Others
         services.AddHttpContextAccessor();
 
