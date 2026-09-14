@@ -43,6 +43,29 @@ public class AuditInterceptorTests
         Assert.Contains("Ada", log.NewValues);
     }
 
+    /// <summary>
+    /// An insert stamps <em>both</em> timestamps, not only <c>CreatedOn</c>. Nothing else
+    /// fills <c>LastModifiedOn</c> in: the model sets no database default, and the property
+    /// is non-nullable, so an insert that leaves it alone writes <c>default(DateTimeOffset)</c>
+    /// — year 1 — and Postgres accepts year 1. The row is silently wrong rather than
+    /// rejected, which is why the guarantee is pinned here instead of left to the column.
+    /// </summary>
+    [Fact]
+    public void An_insert_stamps_last_modified_as_well_as_created()
+    {
+        using var harness = new AuditHarness();
+        var user = new User { Name = "Ada" };
+        harness.Context.Users.Add(user);
+
+        harness.Save();
+
+        Assert.NotEqual(default(DateTimeOffset), user.LastModifiedOn);
+        Assert.True(user.LastModifiedOn >= user.CreatedOn);
+
+        // A timestamp with no author is only half the record, so the two must agree.
+        Assert.Equal(user.CreatedBy, user.LastModifiedBy);
+    }
+
     [Fact]
     public void An_update_records_both_sides_of_the_change()
     {
