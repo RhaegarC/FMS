@@ -62,6 +62,15 @@ internal sealed class AuditSaveChangesInterceptor(IUserContextService userContex
                 case EntityState.Added:
                     entry.Entity.CreatedOn = now;
                     entry.Entity.CreatedBy ??= actor;
+
+                    // Also on insert. The model sets no database default, and the property
+                    // is non-nullable, so a row that left these alone would be written as
+                    // default(DateTimeOffset) — year 1 — which Postgres accepts for
+                    // timestamptz. That makes the insert succeed with a sentinel instead of
+                    // failing, so the guarantee cannot be left to the column.
+                    entry.Entity.LastModifiedOn = now;
+                    entry.Entity.LastModifiedBy ??= actor;
+
                     entry.Entity.IsDeleted = false;
                     break;
                 case EntityState.Modified:

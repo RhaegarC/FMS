@@ -15,13 +15,13 @@ public class AuditInterceptorTests
     public void An_insert_is_recorded_with_its_key_and_table()
     {
         using var harness = new AuditHarness();
-        var user = new User { DisplayName = "Ada" };
+        var user = new User { Name = "Ada" };
         harness.Context.Users.Add(user);
 
         harness.Save();
 
         var log = harness.SingleEntry();
-        Assert.Equal("Users", log.TableName);
+        Assert.Equal("users", log.TableName);
         Assert.Equal("Added", log.Action);
         Assert.Equal(user.Id, log.EntityId);
     }
@@ -34,7 +34,7 @@ public class AuditInterceptorTests
     public void An_insert_has_new_values_and_no_old_values()
     {
         using var harness = new AuditHarness();
-        harness.Context.Users.Add(new User { DisplayName = "Ada" });
+        harness.Context.Users.Add(new User { Name = "Ada" });
 
         harness.Save();
 
@@ -43,14 +43,37 @@ public class AuditInterceptorTests
         Assert.Contains("Ada", log.NewValues);
     }
 
+    /// <summary>
+    /// An insert stamps <em>both</em> timestamps, not only <c>CreatedOn</c>. Nothing else
+    /// fills <c>LastModifiedOn</c> in: the model sets no database default, and the property
+    /// is non-nullable, so an insert that leaves it alone writes <c>default(DateTimeOffset)</c>
+    /// — year 1 — and Postgres accepts year 1. The row is silently wrong rather than
+    /// rejected, which is why the guarantee is pinned here instead of left to the column.
+    /// </summary>
+    [Fact]
+    public void An_insert_stamps_last_modified_as_well_as_created()
+    {
+        using var harness = new AuditHarness();
+        var user = new User { Name = "Ada" };
+        harness.Context.Users.Add(user);
+
+        harness.Save();
+
+        Assert.NotEqual(default(DateTimeOffset), user.LastModifiedOn);
+        Assert.True(user.LastModifiedOn >= user.CreatedOn);
+
+        // A timestamp with no author is only half the record, so the two must agree.
+        Assert.Equal(user.CreatedBy, user.LastModifiedBy);
+    }
+
     [Fact]
     public void An_update_records_both_sides_of_the_change()
     {
         using var harness = new AuditHarness();
-        var user = new User { Id = "user-1", DisplayName = "before" };
+        var user = new User { Id = "3a7d9f21-6c4b-4e82-a5d0-9b1e3f7c2a48", Name = "before" };
         harness.Context.Attach(user);
-        harness.Context.Entry(user).Property(u => u.DisplayName).CurrentValue = "after";
-        harness.Context.Entry(user).Property(u => u.DisplayName).IsModified = true;
+        harness.Context.Entry(user).Property(u => u.Name).CurrentValue = "after";
+        harness.Context.Entry(user).Property(u => u.Name).IsModified = true;
 
         harness.Save();
 
@@ -58,7 +81,7 @@ public class AuditInterceptorTests
         Assert.Equal("Modified", log.Action);
         Assert.Contains("before", log.OldValues);
         Assert.Contains("after", log.NewValues);
-        Assert.Contains(nameof(User.DisplayName), log.ChangedColumns);
+        Assert.Contains(nameof(User.Name), log.ChangedColumns);
     }
 
     /// <summary>
@@ -70,7 +93,7 @@ public class AuditInterceptorTests
     public void A_delete_has_old_values_and_no_new_values()
     {
         using var harness = new AuditHarness();
-        var user = new User { Id = "user-1", DisplayName = "gone" };
+        var user = new User { Id = "3a7d9f21-6c4b-4e82-a5d0-9b1e3f7c2a48", Name = "gone" };
         harness.Context.Attach(user);
         harness.Context.Remove(user);
 
@@ -91,11 +114,11 @@ public class AuditInterceptorTests
     public async Task The_async_save_path_is_audited_too()
     {
         using var harness = new AuditHarness();
-        harness.Context.Users.Add(new User { DisplayName = "Ada" });
+        harness.Context.Users.Add(new User { Name = "Ada" });
 
         await harness.SaveAsync();
 
-        Assert.Equal("Users", harness.SingleEntry().TableName);
+        Assert.Equal("users", harness.SingleEntry().TableName);
     }
 
     [Fact]

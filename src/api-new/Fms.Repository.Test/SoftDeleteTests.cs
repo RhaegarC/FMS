@@ -14,7 +14,7 @@ public class SoftDeleteTests
     /// <summary>
     /// <c>ToQueryString()</c> builds the statement without running it, so this needs no
     /// database. Asserting on the presence of a WHERE clause is deliberate: the column
-    /// list always mentions IsDeleted, so a substring check on the column name alone would
+    /// list always mentions isDeleted, so a substring check on the column name alone would
     /// pass even with the filter removed.
     /// </summary>
     [Fact]
@@ -25,7 +25,7 @@ public class SoftDeleteTests
         string sql = context.Users.ToQueryString();
 
         Assert.Contains("WHERE", sql);
-        Assert.Contains("IsDeleted", sql);
+        Assert.Contains("isDeleted", sql);
     }
 
     /// <summary>
