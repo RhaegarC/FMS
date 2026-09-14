@@ -61,6 +61,8 @@ Every requirement decision from the grilling session, in order:
 | 21 | Permission attributes | `user.id`, `user.email`, `user.role` only — no Entra group claims |
 | 22 | Deployment | All services + DB in local Docker (stage 1), separate ports |
 | 23 | Frontend authoring | **Figma Make exports the React UI** into `src/web`; the only hand-written frontend code is integrating the exported app with the backend API (auth + `api-client` calls) |
+| 24 | Persistence keys | **Application-assigned**, not database-generated: a row is identifiable before it is saved, which is what lets the audit trail record a key for an insert. No `gen_random_uuid()` / `now()` defaults, so the interceptor stays the single source of truth for ids and timestamps |
+| 25 | User identity key | `users.id` **is** the Entra object id — no separate `entraObjectId` column, since the object id is stable and is what the token carries. Entra object ids are GUIDs so the key still satisfies the `uuid` contract; the `sub` claim is not accepted as a fallback. This settles what `user.id` means in a permission expression (decision 21): the **object id**, not a surrogate |
 
 ## Data model
 
@@ -68,7 +70,7 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 
 | Entity | Table | Key fields |
 |---|---|---|
-| User | `users` | `id` (PK, uuid), `entraObjectId` (unique), `email`, `name`, `role` (`admin` \| `user`) |
+| User | `users` | `id` (PK, uuid — **is** the Entra object id), `email`, `name`, `role` (`admin` \| `user`) |
 | Space | `spaces` | `id` (PK, uuid), `name` |
 | Form (Dataset) | `forms` | `id` (PK, uuid), `spaceId` (FK → spaces), `name`, `schema` (jsonb), `lastModifiedOn` |
 | Submission | `submissions` | `id` (PK, uuid), `formId` (FK → forms), `userId` (FK → users), `data` (jsonb), `createdOn` |
@@ -76,7 +78,11 @@ Hierarchy: `Space → Form (a.k.a. Dataset) → Submission`
 
 **Access semantics**: a space grant = access to all forms under that space (e.g. `spaceA.*`); a form grant = that single form; effective access = union of space + form grants. Default deny.
 
-**Column conventions**: column names are camelCase throughout (no underscores); primary and foreign keys are Postgres `uuid` columns surfaced in .NET and JSON as strings, generated via `gen_random_uuid()` — see docs/backend-standard.md §6.1.1.
+**Column conventions**: column names are camelCase throughout (no underscores); primary and foreign keys are Postgres `uuid` columns surfaced in .NET and JSON as strings. Ids are **assigned by the application**, not by the database — there is no `gen_random_uuid()` default — so a row is identifiable before it is saved, which is what lets the audit trail record a key for an insert. The `createdOn` / `lastModifiedOn` timestamps are likewise written by the audit interceptor rather than a `now()` default, and it stamps both on insert as well as update.
+
+**The user's key is their Entra object id.** There is no separate `entraObjectId` column: the object id is stable for the life of the account and is what the token carries, so a second column would be a second thing to keep in step with it. Entra object ids are GUIDs, so the key still satisfies the `uuid` contract. The `sub` claim is deliberately not used as a fallback — it is a pairwise identifier with no such guarantee — so a token without an `oid` cannot provision a user.
+
+> The conventions above are the target design, implemented in `src/api-new`. The deployed `src/api` predates them: it generates ids with `gen_random_uuid()` and holds the object id in a separate unique column. Both are live until the port reaches parity — see [docs/backend-refactor/backend-template-refactor-plan.md](backend-refactor/backend-template-refactor-plan.md).
 
 **Schema-change discipline**: when a form schema evolves, update this table in the same PR.
 

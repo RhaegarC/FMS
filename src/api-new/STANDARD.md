@@ -494,19 +494,23 @@ and stops.
 
 ## 11. Continuous integration
 
-Two jobs run on every push and pull request.
+**FMS has no CI.** There is no `.github/workflows`, so nothing runs on push or pull request and
+the checks below are manual. Written down so that adding a workflow is transcription rather than
+decision.
 
-**Build and test** — builds `Fms.slnx` and runs the suite.
+A job needs to do two things, from `src/api-new/`:
 
-**Generate from the template and build the result** — packs the template package, installs it
-into an isolated template hive, generates a project, then builds **and tests what came out**,
-and fails if any file still carries the template's placeholder name.
+- `dotnet build` — must be warning-free. Nullable is enabled; fix warnings rather than suppress them.
+- `dotnet test` — must pass, **and the exit code must be checked**, not just the "Passed!" lines.
+  A solution-level run reports a non-zero exit when any project fails to host tests even when every
+  test passed. That is not hypothetical: adding `Fms.TestSupport` did it, because `dotnet test`
+  probes every project in the solution for a test host. The fix is `IsTestProject=false` on the
+  library — see section 1.
 
-The second job exists because the first cannot see template rot. Files under the template are
-only ever exercised *after* `dotnet new` has rewritten project names in both paths and file
-contents, so a stale path, a wrong base image, or a name the rewriter misses builds perfectly
-in place and breaks for every user. **Any change to the template's structure, file names, or
-project names must keep that job green.**
+The template repository runs a second job that regenerates from the package and builds the result.
+**That job has no counterpart here**: FMS consumes the template, it does not ship it. Template rot
+is the template's problem, and the fix belongs in a release of `Rg.Backend.Api` rather than in a
+workflow in this repository.
 
 ---
 
@@ -514,28 +518,29 @@ project names must keep that job green.**
 
 Listed so you are not surprised by them, and so fixing one is an obvious pull request.
 
-1. **Audit columns are not maintained.** `DatabaseRepository.CreateAsync` does not set
-   `CreatedOn` or `CreatedBy`, and `UpdateAsync` does not set `LastModifiedOn` or
-   `LastModifiedBy`. Only `DeleteAsync` sets them — and it hardcodes `LastModifiedBy = "sys"`
-   instead of reading `IUserContextService`, so it attributes a real user's action to the
-   system even though the audit trail knows who they were. Until this is fixed, `CreatedOn` is
-   `default(DateTime)` and `LastModified*` cannot be trusted.
+1. **`DatabaseRepository.DeleteAsync` hardcodes `LastModifiedBy = "sys"`.** It runs at the wrong
+   time to know who is acting, and it attributes a real user's action to the system. In practice
+   the interceptor overwrites it during the save, so the recorded value is right — but the line is
+   a lie that becomes one the moment the interceptor is not registered, and `DeleteAsync` should
+   read `IUserContextService` instead.
 2. **`DeleteAsync` issues one `FindAsync` per id** and wraps the batch in no transaction, so a
    large delete is N round trips and can partially apply.
-3. **No EF Core migrations are present.** Schema changes have no defined home yet. This is the
-   largest gap in the template: decide the migration strategy before the first real table.
-4. **`IUserService` and `UserService` are empty** and `UserController` has a single placeholder
-   action. That controller also inherits `Controller` rather than `ControllerBase`, and routes
-   on `[controller]` rather than `api/[controller]` as section 2 shows. All of it is scaffolding
-   to replace, not an example to copy.
+3. **No EF Core migrations are present.** `src/api-new` therefore cannot create its own schema.
+   This is the largest open gap: decide the migration strategy before the first real deployment.
+   The deployed `src/api` carries an `InitialCreate`, which is the shape to follow.
+4. **`UserController` is still template scaffolding.** It inherits `Controller` rather than
+   `ControllerBase`, routes on `[controller]` rather than `api/[controller]` as section 2 shows,
+   and carries a placeholder `Index` action. Worse than untidy: its `GET /User/me` is **not** the
+   deployed contract, which is `GET /api/me` returning a `MeResponse`. The ported endpoint
+   currently returns the raw `User` entity, which leaks `IsDeleted` and the audit columns into the
+   response body. Replacing it is the Session & HTTP surface slice.
 5. **A soft delete is recorded as `"Modified"`,** not as a distinct `"Deleted"`, because
    `Action` holds the EF `EntityState`. A soft delete is therefore indistinguishable in the
    history from an ordinary update.
-6. **Timestamps are inconsistent.** `EntityBase` uses `DateTime`, `AuditLog` uses
-   `DateTimeOffset`, and `DatabaseRepository` uses `DateTime.UtcNow`.
+6. **Timestamps are inconsistent.** `EntityBase` uses `DateTimeOffset` while `DatabaseRepository`
+   assigns `DateTime.UtcNow`, which converts implicitly to a zero offset. Consistent in effect,
+   inconsistent in kind.
 7. **`Fms.Api.http` requests `/weatherforecast/`,** which does not exist in this solution.
-8. **`SampleTemplate/placeholder.txt`** ships into every generated project and serves no
-   purpose once the template has been applied.
 
 ---
 
