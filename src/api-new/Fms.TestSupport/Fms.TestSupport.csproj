@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- It holds no tests, but it lives in the solution next to the tiers that do, and
+         `dotnet test` probes every project for a test host. Without this it tries to run
+         the library as a test assembly, the testhost exits with an error, and the whole
+         solution-level run reports a non-zero exit code even when every test passed. -->
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <!-- Not a test project: it holds no tests and is never run directly. It is the shared
+       home for the doubles and harnesses the tiered test projects would otherwise each
+       need their own copy of. Fms.TestSupport needs no InternalsVisibleTo grant — it
+       reaches the layers through their public surface only. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fms.Interface\Fms.Interface.csproj" />
+    <ProjectReference Include="..\Fms.Model\Fms.Model.csproj" />
+    <ProjectReference Include="..\Fms.Repository\Fms.Repository.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

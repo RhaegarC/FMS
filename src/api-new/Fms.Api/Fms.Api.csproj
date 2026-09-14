@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>5C69ECC2-3623-463C-AC9B-66CF9FF3D6F6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fms.Interface\Fms.Interface.csproj" />
+    <ProjectReference Include="..\Fms.Model\Fms.Model.csproj" />
+    <ProjectReference Include="..\Fms.Repository\Fms.Repository.csproj" />
+    <ProjectReference Include="..\Fms.Service\Fms.Service.csproj" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fms.Api.Test" />
+  </ItemGroup>
+
+</Project>
